@@ -1,0 +1,17 @@
+# Secrets and local runtime state
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+# Python virtualenvs
+.venv/
+node_modules/
+dist/
+.cache/
+postgres_data/
+*.db
+.DS_Store

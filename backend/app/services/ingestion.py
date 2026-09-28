@@ -1,0 +1,501 @@
+from __future__ import annotations
+
+import csv
+import hashlib
+import io
+import re
+import uuid
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
+from statistics import median
+
+from sqlalchemy.orm import Session
+
+from app.domain.enums import ReturnInputUnit
+from app.domain.models import Analysis, ReturnObservation, SourceRow, ValidationIssue as IssueRow
+from app.domain.schemas import AnalysisResponse, FundSummaryOut, ValidationIssueOut
+
+CANONICAL_COLUMNS: tuple[str, ...] = (
+    "fund_id",
+    "fund_name",
+    "strategy",
+    "period",
+    "net_return",
+    "liquidity_frequency",
+    "notice_days",
+    "lockup_months",
+    "mgmt_fee_bps",
+    "perf_fee_bps",
+    "notes",
+)
+
+_ALIASES: dict[str, tuple[str, ...]] = {
+    "fund_id": ("fund_id", "id"),
+    "fund_name": ("fund_name", "fund", "manager"),
+    "period": ("period", "date", "month"),
+    "net_return": ("net_return", "return", "monthly_return"),
+}
+
+_MONTH_NAMES: dict[str, int] = {
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
+    "may": 5,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "sept": 9,
+    "september": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
+}
+
+METADATA_FIELDS: tuple[str, ...] = (
+    "fund_name",
+    "strategy",
+    "liquidity_frequency",
+    "notice_days",
+    "lockup_months",
+    "mgmt_fee_bps",
+    "perf_fee_bps",
+    "notes",
+)
+
+
+class ParseError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class SourceRecord:
+    row_number: int
+    raw: dict[str, str]
+
+
+@dataclass
+class MappedRow:
+    row_number: int
+    raw: dict[str, str]
+    values: dict[str, str]
+
+
+@dataclass
+class ParsedRow:
+    row_number: int
+    raw: dict[str, str]
+    values: dict[str, str]
+    fund_id: str | None
+    period: date | None
+    net_return: Decimal | None
+    return_input_unit: ReturnInputUnit | None
+    period_error: str | None
+    return_error: str | None
+
+
+@dataclass
+class ReturnUnitInference:
+    unit: ReturnInputUnit
+    median_abs_bare: float | None
+    bare_count: int
+    mixed_scale: bool
+    message: str
+
+
+def _normalize_header(name: str) -> str:
+    return re.sub(r"\s+", " ", name.strip().lstrip("\ufeff")).lower()
+
+
+def map_columns(headers: list[str]) -> tuple[dict[str, str], list[str]]:
+    """Return (canonical -> original header, missing canonical names)."""
+    normalized: dict[str, str] = {}
+    for original in headers:
+        key = _normalize_header(original)
+        if key and key not in normalized:
+            normalized[key] = original.strip().lstrip("\ufeff")
+
+    mapping: dict[str, str] = {}
+    for canonical in CANONICAL_COLUMNS:
+        aliases = _ALIASES.get(canonical, (canonical,))
+        chosen: str | None = None
+        if canonical in normalized:
+            chosen = normalized[canonical]
+        else:
+            for alias in aliases:
+                if alias != canonical and alias in normalized:
+                    chosen = normalized[alias]
+                    break
+        if chosen is not None:
+            mapping[canonical] = chosen
+
+    missing = [name for name in CANONICAL_COLUMNS if name not in mapping]
+    return mapping, missing
+
+
+def parse_period(value: str) -> date:
+    raw = value.strip()
+    if not raw:
+        raise ParseError("Period is empty")
+
+    match = re.fullmatch(r"(\d{4})-(\d{1,2})", raw)
+    if match:
+        return _month_start(int(match.group(1)), int(match.group(2)))
+
+    match = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", raw)
+    if match:
+        return _month_start(int(match.group(1)), int(match.group(2)))
+
+    match = re.fullmatch(r"(\d{1,2})/(\d{4})", raw)
+    if match:
+        return _month_start(int(match.group(2)), int(match.group(1)))
+
+    match = re.fullmatch(r"([A-Za-z]{3,9})[- ](\d{4})", raw)
+    if match:
+        month = _MONTH_NAMES.get(match.group(1).lower())
+        if month is None:
+            raise ParseError(f"Unrecognized month name: {raw}")
+        return _month_start(int(match.group(2)), month)
+
+    match = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{4})", raw)
+    if match:
+        first = int(match.group(1))
+        second = int(match.group(2))
+        year = int(match.group(3))
+        if first > 12:
+            raise ParseError(f"Day-first dates are not accepted: {raw}")
+        if second > 31:
+            raise ParseError(f"Invalid day in period: {raw}")
+        return _month_start(year, first)
+
+    raise ParseError(f"Unrecognized period format: {raw}")
+
+
+def parse_return(value: str, bare_unit: ReturnInputUnit) -> tuple[Decimal, ReturnInputUnit]:
+    raw = value.strip()
+    if not raw:
+        raise ParseError("Return is empty")
+
+    if raw.lower() in {"n/a", "na", "null", "none", "-"}:
+        raise ParseError(f"Return is not numeric: {raw}")
+
+    percent_suffix = raw.endswith("%")
+    numeric_text = raw[:-1].strip() if percent_suffix else raw
+    numeric_text = numeric_text.replace(",", "")
+    try:
+        magnitude = Decimal(numeric_text)
+    except InvalidOperation as exc:
+        raise ParseError(f"Return is not numeric: {raw}") from exc
+
+    if percent_suffix:
+        return magnitude / Decimal("100"), ReturnInputUnit.PERCENT
+    if bare_unit is ReturnInputUnit.PERCENT:
+        return magnitude / Decimal("100"), ReturnInputUnit.PERCENT
+    return magnitude, ReturnInputUnit.DECIMAL
+
+
+def infer_return_unit(bare_values: list[Decimal]) -> ReturnUnitInference:
+    if not bare_values:
+        return ReturnUnitInference(
+            unit=ReturnInputUnit.DECIMAL,
+            median_abs_bare=None,
+            bare_count=0,
+            mixed_scale=False,
+            message="No bare numeric returns were found; treating unadorned values as decimals.",
+        )
+
+    abs_values = [abs(value) for value in bare_values]
+    median_abs = float(median(abs_values))
+    unit = ReturnInputUnit.PERCENT if median_abs > 1.0 else ReturnInputUnit.DECIMAL
+    mixed = any(value <= Decimal("1") for value in abs_values) and any(
+        value > Decimal("1") for value in abs_values
+    )
+    unit_label = "percentage points" if unit is ReturnInputUnit.PERCENT else "decimals"
+    message = (
+        f"Inferred file-level return unit for bare numeric values as {unit_label} "
+        f"(median absolute value {median_abs:.4g} across {len(abs_values)} values)."
+    )
+    return ReturnUnitInference(
+        unit=unit,
+        median_abs_bare=median_abs,
+        bare_count=len(abs_values),
+        mixed_scale=mixed,
+        message=message,
+    )
+
+
+def read_csv_records(content: bytes) -> tuple[list[str], list[SourceRecord]]:
+    text = _decode_csv(content)
+    reader = csv.DictReader(io.StringIO(text))
+    if reader.fieldnames is None:
+        raise ValueError("CSV has no header row")
+    headers = [name if name is not None else "" for name in reader.fieldnames]
+    if not any(header.strip() for header in headers):
+        raise ValueError("CSV has no header row")
+
+    records: list[SourceRecord] = []
+    for index, row in enumerate(reader, start=1):
+        raw = {
+            (key or "").lstrip("\ufeff"): "" if value is None else str(value)
+            for key, value in row.items()
+            if key is not None
+        }
+        records.append(SourceRecord(row_number=index, raw=raw))
+    return headers, records
+
+
+def apply_mapping(records: list[SourceRecord], mapping: dict[str, str]) -> list[MappedRow]:
+    mapped: list[MappedRow] = []
+    for record in records:
+        values = {
+            canonical: record.raw.get(original, "").strip()
+            for canonical, original in mapping.items()
+        }
+        mapped.append(MappedRow(row_number=record.row_number, raw=record.raw, values=values))
+    return mapped
+
+
+def collect_bare_return_decimals(rows: list[MappedRow]) -> list[Decimal]:
+    collected: list[Decimal] = []
+    for row in rows:
+        raw = row.values.get("net_return", "").strip()
+        if not raw or raw.endswith("%"):
+            continue
+        try:
+            collected.append(Decimal(raw.replace(",", "")))
+        except InvalidOperation:
+            continue
+    return collected
+
+
+def parse_mapped_rows(rows: list[MappedRow], bare_unit: ReturnInputUnit) -> list[ParsedRow]:
+    parsed: list[ParsedRow] = []
+    for row in rows:
+        fund_id = row.values.get("fund_id", "").strip() or None
+        period: date | None = None
+        period_error: str | None = None
+        net_return: Decimal | None = None
+        unit: ReturnInputUnit | None = None
+        return_error: str | None = None
+
+        period_raw = row.values.get("period", "")
+        try:
+            period = parse_period(period_raw)
+        except ParseError as exc:
+            period_error = str(exc)
+
+        return_raw = row.values.get("net_return", "")
+        try:
+            net_return, unit = parse_return(return_raw, bare_unit)
+        except ParseError as exc:
+            return_error = str(exc)
+
+        parsed.append(
+            ParsedRow(
+                row_number=row.row_number,
+                raw=row.raw,
+                values=row.values,
+                fund_id=fund_id,
+                period=period,
+                net_return=net_return,
+                return_input_unit=unit,
+                period_error=period_error,
+                return_error=return_error,
+            )
+        )
+    return parsed
+
+
+def _month_start(year: int, month: int) -> date:
+    if month < 1 or month > 12:
+        raise ParseError(f"Invalid month: {month}")
+    return date(year, month, 1)
+
+
+def _decode_csv(content: bytes) -> str:
+    if not content:
+        raise ValueError("CSV file is empty")
+    if content.startswith(b"\xef\xbb\xbf"):
+        content = content[3:]
+    try:
+        return content.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("CSV must be UTF-8 encoded") from exc
+
+
+def create_analysis(db: Session, *, filename: str, content: bytes) -> Analysis:
+    from app.services.validation import derive_status, select_observations, validate_upload
+
+    headers, records = read_csv_records(content)
+    mapping, missing = map_columns(headers)
+    mapped_rows = apply_mapping(records, mapping) if not missing else []
+    unit_inference = None
+    parsed_rows: list[ParsedRow] = []
+    if not missing:
+        unit_inference = infer_return_unit(collect_bare_return_decimals(mapped_rows))
+        parsed_rows = parse_mapped_rows(mapped_rows, unit_inference.unit)
+
+    issues = validate_upload(
+        missing_columns=missing,
+        parsed_rows=parsed_rows,
+        unit_inference=unit_inference,
+    )
+    observations = [] if missing else select_observations(parsed_rows)
+    status = derive_status(issues, len(observations))
+
+    fund_ids = _collect_fund_ids(parsed_rows, records, mapping)
+    analysis = Analysis(
+        id=uuid.uuid4(),
+        filename=filename,
+        sha256=hashlib.sha256(content).hexdigest(),
+        uploaded_at=datetime.now(timezone.utc),
+        row_count=len(records),
+        fund_count=len(fund_ids),
+        status=status.value,
+        column_mapping=mapping,
+        source_rows=[
+            SourceRow(row_number=record.row_number, raw=record.raw) for record in records
+        ],
+        return_observations=[
+            ReturnObservation(
+                source_row_number=row.row_number,
+                fund_id=row.fund_id or "",
+                period=row.period,
+                net_return=row.net_return,
+                return_input_unit=(row.return_input_unit or ReturnInputUnit.DECIMAL).value,
+            )
+            for row in observations
+        ],
+        validation_issues=[
+            IssueRow(
+                code=issue.code.value,
+                severity=issue.severity.value,
+                fund_id=issue.fund_id,
+                field=issue.field,
+                row_numbers=issue.row_numbers,
+                message=issue.message,
+                details=issue.details,
+            )
+            for issue in issues
+        ],
+    )
+    db.add(analysis)
+    db.flush()
+    return analysis
+
+
+def analysis_to_response(analysis: Analysis) -> AnalysisResponse:
+    from app.domain.enums import IssueCode, IssueSeverity
+    from app.services.validation import ValidationIssue, is_analysis_blocked
+
+    typed_issues = [
+        ValidationIssue(
+            code=IssueCode(issue.code),
+            severity=IssueSeverity(issue.severity),
+            message=issue.message,
+            fund_id=issue.fund_id,
+            field=issue.field,
+            row_numbers=list(issue.row_numbers or []),
+            details=issue.details or {},
+        )
+        for issue in analysis.validation_issues
+    ]
+    funds = _build_fund_summaries(analysis, typed_issues, is_analysis_blocked)
+    strategies = sorted({fund.strategy for fund in funds if fund.strategy})
+    return AnalysisResponse(
+        analysis_id=analysis.id,
+        filename=analysis.filename,
+        status=analysis.status,  # type: ignore[arg-type]
+        uploaded_at=analysis.uploaded_at,
+        row_count=analysis.row_count,
+        fund_count=analysis.fund_count,
+        column_mapping=analysis.column_mapping,
+        strategies=strategies,
+        issues=[
+            ValidationIssueOut(
+                code=issue.code,
+                severity=issue.severity,
+                fund_id=issue.fund_id,
+                field=issue.field,
+                row_numbers=list(issue.row_numbers or []),
+                message=issue.message,
+                details=issue.details or {},
+            )
+            for issue in analysis.validation_issues
+        ],
+        funds=funds,
+    )
+
+
+def _collect_fund_ids(
+    parsed_rows: list[ParsedRow],
+    records: list[SourceRecord],
+    mapping: dict[str, str],
+) -> set[str]:
+    fund_ids = {row.fund_id for row in parsed_rows if row.fund_id}
+    fund_header = mapping.get("fund_id")
+    if fund_header:
+        for record in records:
+            value = record.raw.get(fund_header, "").strip()
+            if value:
+                fund_ids.add(value)
+    return fund_ids
+
+
+def _build_fund_summaries(analysis: Analysis, issues, is_blocked) -> list[FundSummaryOut]:
+    observations_by_fund: dict[str, list[ReturnObservation]] = defaultdict(list)
+    for observation in analysis.return_observations:
+        observations_by_fund[observation.fund_id].append(observation)
+
+    metadata_by_fund: dict[str, dict[str, str]] = {}
+    fund_header = analysis.column_mapping.get("fund_id")
+    if fund_header:
+        ordered_rows = sorted(analysis.source_rows, key=lambda item: item.row_number)
+        for source in ordered_rows:
+            fund_id = str(source.raw.get(fund_header, "")).strip()
+            if fund_id and fund_id not in metadata_by_fund:
+                metadata_by_fund[fund_id] = {
+                    canonical: str(source.raw.get(original, "")).strip()
+                    for canonical, original in analysis.column_mapping.items()
+                }
+
+    fund_ids = sorted(
+        set(observations_by_fund)
+        | set(metadata_by_fund)
+        | {issue.fund_id for issue in issues if issue.fund_id}
+    )
+    summaries: list[FundSummaryOut] = []
+    for fund_id in fund_ids:
+        fund_obs = sorted(observations_by_fund.get(fund_id, []), key=lambda item: item.period)
+        meta = metadata_by_fund.get(fund_id, {})
+        fund_issues = [issue for issue in issues if issue.fund_id == fund_id]
+        counts = {"error": 0, "warning": 0, "info": 0}
+        for issue in fund_issues:
+            counts[issue.severity.value] = counts.get(issue.severity.value, 0) + 1
+        summaries.append(
+            FundSummaryOut(
+                fund_id=fund_id,
+                fund_name=meta.get("fund_name", ""),
+                strategy=meta.get("strategy", ""),
+                liquidity_frequency=meta.get("liquidity_frequency", ""),
+                first_period=fund_obs[0].period if fund_obs else None,
+                last_period=fund_obs[-1].period if fund_obs else None,
+                observations=len(fund_obs),
+                analysis_blocked=is_blocked(fund_id, issues),
+                issue_counts=counts,
+            )
+        )
+    return summaries
