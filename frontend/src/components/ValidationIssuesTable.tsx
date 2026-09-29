@@ -88,13 +88,33 @@ export function ValidationIssuesTable({ issues }: ValidationIssuesTableProps) {
                 <td className="px-3 py-2 font-mono text-xs text-slate-400">
                   {issue.row_numbers.length ? issue.row_numbers.join(", ") : "—"}
                 </td>
-                <td className="px-3 py-2 text-slate-200">{issue.message}</td>
+                <td className="px-3 py-2 text-slate-200">
+                  {issue.message}
+                  <RelatedFunds issue={issue} />
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </section>
+  );
+}
+
+function RelatedFunds({ issue }: { issue: ValidationIssue }) {
+  const related = issue.details.related_fund_ids;
+  if (issue.code !== "FUND_ID_MISMATCH" || !Array.isArray(related) || related.length === 0) {
+    return null;
+  }
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+      <span className="text-slate-500">Related:</span>
+      {related.map((fundId) => (
+        <span key={String(fundId)} className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-cyan-200">
+          {String(fundId)}
+        </span>
+      ))}
+    </div>
   );
 }
 

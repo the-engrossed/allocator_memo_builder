@@ -99,6 +99,34 @@ def test_excess_return_is_unverifiable_without_benchmark() -> None:
     assert with_benchmark.excess_return_bps == 1414
 
 
+def test_unverifiable_reasons_cover_every_null_metric() -> None:
+    base = {
+        "benchmark": "SPY",
+        "risk_free_annual": 0.04,
+        "risk_free_source": "configured_fallback",
+        "target_return_bps": 1000,
+    }
+    full = compute_fund_metrics(_series([0.01, 0.02] * 7), benchmark_returns=_series([0.01, -0.01] * 7), **base)
+    assert full.unverifiable_reasons() == {}
+
+    no_benchmark = compute_fund_metrics(_series([0.01, 0.02] * 7), benchmark_returns=None, **base)
+    assert no_benchmark.unverifiable_reasons() == {
+        "correlation": "Benchmark SPY unavailable for this run",
+        "excess_return_bps": "Benchmark SPY unavailable for this run",
+    }
+
+    flat = compute_fund_metrics(_series([0.01] * 12), benchmark_returns=_series([0.01, -0.01] * 6), **base)
+    assert flat.unverifiable_reasons() == {
+        "sharpe": "Returns have no variance",
+        "correlation": "No variance in fund or SPY returns over the overlap",
+    }
+    assert flat.to_json()["unverifiable_reasons"] == flat.unverifiable_reasons()
+
+    single = compute_fund_metrics(_series([0.01]), benchmark_returns=None, **base)
+    assert single.unverifiable_reasons()["volatility_bps"] == "1 months of history; 2 required"
+    assert single.unverifiable_reasons()["sharpe"] == "1 months of history; 2 required"
+
+
 def test_risk_free_uses_window_mean_else_fallback() -> None:
     rates = _series([0.04, 0.05, 0.06], start="2023-01-01")
     assert risk_free_for_window(rates, date(2023, 2, 1), date(2023, 3, 1), 0.01) == (

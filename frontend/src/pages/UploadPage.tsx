@@ -2,7 +2,8 @@ import { useState } from "react";
 import { uploadAnalysis } from "../api/client";
 import { UploadDropzone } from "../components/UploadDropzone";
 import { ValidationIssuesTable } from "../components/ValidationIssuesTable";
-import type { AnalysisResponse, AnalysisStatus } from "../types/api";
+import { formatMonthRange } from "../lib/format";
+import type { AnalysisResponse, AnalysisStatus, CommonWindow } from "../types/api";
 
 interface UploadPageProps {
   analysis: AnalysisResponse | null;
@@ -57,6 +58,8 @@ function AnalysisResult({
         <SummaryStat label="Funds" value={String(analysis.fund_count)} />
         <SummaryStat label="Issues" value={String(analysis.issues.length)} />
       </section>
+
+      <CommonWindowNote window={analysis.common_window ?? null} />
 
       <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
         <h2 className="text-sm font-semibold text-slate-100">Column mapping</h2>
@@ -128,6 +131,23 @@ function AnalysisResult({
         </p>
       )}
     </div>
+  );
+}
+
+function CommonWindowNote({ window }: { window: CommonWindow | null }) {
+  let text: string;
+  if (window === null) {
+    text = "No fund has 12 or more valid monthly observations, so there is no common window.";
+  } else if (window.start === null) {
+    text = `The ${window.fund_count} funds with 12+ observations share no overlapping month.`;
+  } else {
+    text = `${formatMonthRange(window.start, window.end)} · ${window.months} months shared by all ${window.fund_count} funds with 12+ observations.`;
+  }
+  return (
+    <p className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-300">
+      <span className="mr-2 text-xs uppercase tracking-wide text-slate-400">Common window</span>
+      {text}
+    </p>
   );
 }
 

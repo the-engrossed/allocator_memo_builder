@@ -158,7 +158,7 @@ def create_ranking_run(
                 selection_reason=None if reason is None else reason.value,
                 selection_detail=shortlist.details.get(fund_id),
                 inputs=item["inputs_json"],
-                metrics=None if metrics is None else metrics.to_json(),
+                metrics=_metrics_json(fund_id, item),
                 screens=[screen.to_json() for screen in item["screens"]],
                 score_components=None if score is None else score.components,
                 data_quality=item["data_quality"],
@@ -398,22 +398,55 @@ _METRIC_EVIDENCE = {
     "max_drawdown_bps": "MAX-DRAWDOWN",
     "target_gap_bps": "TARGET-GAP",
 }
+_REPORTED_METRICS = (
+    *_METRIC_EVIDENCE,
+    "correlation",
+    "excess_return_bps",
+)
+
+
+def _metric_evidence(fund_id: str, metrics: FundMetrics | None) -> dict[str, str]:
+    """Evidence id for every metric that has a value; unverifiable metrics get none."""
+    if metrics is None:
+        return {}
+    key = evidence_key(fund_id)
+    values = metrics.to_json()
+    evidence = {
+        field: f"MET-{key}-{name}"
+        for field, name in _METRIC_EVIDENCE.items()
+        if values[field] is not None
+    }
+    if metrics.correlation is not None:
+        evidence["correlation"] = f"MET-{key}-CORRELATION-{metrics.benchmark}"
+    if metrics.excess_return_bps is not None:
+        evidence["excess_return_bps"] = f"MET-{key}-EXCESS-VS-{metrics.benchmark}"
+    return evidence
+
+
+def _metrics_json(fund_id: str, item: dict) -> dict:
+    metrics: FundMetrics | None = item["metrics"]
+    if metrics is not None:
+        data = metrics.to_json()
+    else:
+        reason = "Fund blocked by validation: " + ", ".join(item["inputs"].blocking_codes)
+        data = {name: None for name in _REPORTED_METRICS}
+        data.update(
+            window_start=None,
+            window_end=None,
+            correlation_overlap_months=0,
+            benchmark=item["benchmark"],
+            benchmark_available=None,
+            risk_free_annual_bps=None,
+            risk_free_source=None,
+            unverifiable_reasons={name: reason for name in _REPORTED_METRICS},
+        )
+    data["metric_evidence"] = _metric_evidence(fund_id, metrics)
+    return data
 
 
 def _evidence_ids(fund_id: str, item: dict) -> list[str]:
-    key = evidence_key(fund_id)
     ids = [field["evidence_id"] for field in item["inputs_json"].values()]
-    metrics: FundMetrics | None = item["metrics"]
-    if metrics is not None:
-        values = metrics.to_json()
-        ids.extend(
-            f"MET-{key}-{name}" for field, name in _METRIC_EVIDENCE.items()
-            if values[field] is not None
-        )
-        if metrics.correlation is not None:
-            ids.append(f"MET-{key}-CORRELATION-{metrics.benchmark}")
-        if metrics.excess_return_bps is not None:
-            ids.append(f"MET-{key}-EXCESS-VS-{metrics.benchmark}")
+    ids.extend(_metric_evidence(fund_id, item["metrics"]).values())
     ids.extend(screen.code for screen in item["screens"])
     ids.extend(issue["evidence_id"] for issue in item["data_quality"])
     return ids

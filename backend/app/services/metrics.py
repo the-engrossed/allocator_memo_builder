@@ -147,10 +147,40 @@ class FundMetrics:
     target_gap_bps: int | None
     excess_return_bps: int | None = None
 
+    def unverifiable_reasons(self) -> dict[str, str]:
+        """A human-readable reason for every metric that is None."""
+        months = self.months_of_history
+        overlap = self.correlation_overlap_months
+        if not self.benchmark_available:
+            benchmark_reason = f"Benchmark {self.benchmark} unavailable for this run"
+        elif overlap < MIN_OVERLAP_MONTHS_CORRELATION:
+            benchmark_reason = (
+                f"{overlap} overlapping months with {self.benchmark}; "
+                f"{MIN_OVERLAP_MONTHS_CORRELATION} required"
+            )
+        else:
+            benchmark_reason = f"No variance in fund or {self.benchmark} returns over the overlap"
+        history_reason = f"{months} months of history; {MIN_MONTHS_ANNUALIZED_RETURN} required"
+        candidates = {
+            "annualized_return_bps": history_reason,
+            "target_gap_bps": f"Annualized return unverifiable: {history_reason}",
+            "volatility_bps": f"{months} months of history; 2 required",
+            "sharpe": (
+                f"{months} months of history; 2 required" if months < 2
+                else "Returns have no variance"
+            ),
+            "max_drawdown_bps": "No return history",
+            "correlation": benchmark_reason,
+            "excess_return_bps": benchmark_reason,
+        }
+        values = asdict(self)
+        return {name: reason for name, reason in candidates.items() if values[name] is None}
+
     def to_json(self) -> dict:
         data = asdict(self)
         data["window_start"] = self.window_start.isoformat() if self.window_start else None
         data["window_end"] = self.window_end.isoformat() if self.window_end else None
+        data["unverifiable_reasons"] = self.unverifiable_reasons()
         return data
 
 

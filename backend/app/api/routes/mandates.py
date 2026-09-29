@@ -38,6 +38,10 @@ def put_mandate(
 def read_mandate(analysis_id: UUID, db: Session = Depends(get_db)) -> MandateResponse:
     try:
         mandate = get_mandate(db, analysis_id)
-    except (AnalysisNotFoundError, MandateNotFoundError) as exc:
+    except AnalysisNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except MandateNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail={"code": "NO_MANDATE", "message": str(exc)}
+        ) from exc
     return MandateResponse.model_validate(mandate)

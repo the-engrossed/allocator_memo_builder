@@ -139,18 +139,33 @@ def test_notes_input_is_missing_when_empty(client: TestClient, live_benchmarks: 
     assert {key: solo[key] for key in empty} == empty
 
 
-def test_missing_analysis_is_404(client: TestClient) -> None:
+def test_missing_analysis_is_plain_404(client: TestClient) -> None:
     missing = uuid.uuid4()
-    assert client.post(f"/api/analyses/{missing}/ranking-runs").status_code == 404
-    assert client.get(f"/api/analyses/{missing}/ranking-runs/latest").status_code == 404
-    assert client.get(f"/api/ranking-runs/{missing}").status_code == 404
+    for response in (
+        client.post(f"/api/analyses/{missing}/ranking-runs"),
+        client.get(f"/api/analyses/{missing}/ranking-runs/latest"),
+        client.get(f"/api/ranking-runs/{missing}"),
+        client.get(f"/api/analyses/{missing}/mandate"),
+    ):
+        assert response.status_code == 404
+        assert isinstance(response.json()["detail"], str)
 
 
-def test_missing_mandate_is_409(client: TestClient, analysis_id: uuid.UUID) -> None:
+def test_missing_mandate_is_409_and_no_run_is_coded_404(
+    client: TestClient, analysis_id: uuid.UUID
+) -> None:
+    latest = client.get(f"/api/analyses/{analysis_id}/ranking-runs/latest")
+    assert latest.status_code == 404
+    assert latest.json()["detail"] == {
+        "code": "NO_RANKING_RUN",
+        "message": f"Analysis {analysis_id} has no ranking runs yet.",
+    }
+    mandate = client.get(f"/api/analyses/{analysis_id}/mandate")
+    assert mandate.status_code == 404 and mandate.json()["detail"]["code"] == "NO_MANDATE"
+
     response = client.post(f"/api/analyses/{analysis_id}/ranking-runs")
     assert response.status_code == 409
     assert "no saved mandate" in response.json()["detail"]
-    assert client.get(f"/api/analyses/{analysis_id}/ranking-runs/latest").status_code == 404
 
 
 def test_sample_universe_end_to_end(client: TestClient, live_benchmarks: None) -> None:
@@ -163,8 +178,34 @@ def test_sample_universe_end_to_end(client: TestClient, live_benchmarks: None) -
     assert _failed(funds["F005"]) == {"LIQUIDITY", "LOCKUP"}
     assert _failed(funds["F008"]) == {"TRACK-RECORD"}
     assert _failed(funds["F010"]) == {"TRACK-RECORD"}
-    assert "BLOCKING-VALIDATION" in _failed(funds["F009"]) and funds["F009"]["metrics"] is None
+    assert "BLOCKING-VALIDATION" in _failed(funds["F009"])
     assert "SCR-F005-LOCKUP-FAIL" in funds["F005"]["evidence_ids"]
+
+    blocked = funds["F009"]["metrics"]
+    assert blocked["sharpe"] is None and blocked["metric_evidence"] == {}
+    assert set(blocked["unverifiable_reasons"].values()) == {
+        "Fund blocked by validation: RETURN_OUT_OF_RANGE"
+    }
+    assert "months_of_history" in blocked["unverifiable_reasons"]
+    short = funds["F008"]["metrics"]
+    assert short["unverifiable_reasons"] == {
+        "annualized_return_bps": "11 months of history; 12 required",
+        "target_gap_bps": "Annualized return unverifiable: 11 months of history; 12 required",
+        "correlation": "11 overlapping months with SPY; 12 required",
+        "excess_return_bps": "11 overlapping months with SPY; 12 required",
+    }
+    assert funds["F001"]["metrics"]["unverifiable_reasons"] == {}
+    assert funds["F001"]["metrics"]["metric_evidence"]["sharpe"] == "MET-F001-SHARPE"
+    assert funds["F002"]["metrics"]["metric_evidence"]["correlation"] == "MET-F002-CORRELATION-AGG"
+    for fund_id, fund in funds.items():
+        metrics = fund["metrics"]
+        assert set(metrics["metric_evidence"].values()) <= set(fund["evidence_ids"]), fund_id
+        for name, value in metrics.items():
+            if name in metrics["metric_evidence"]:
+                assert value is not None, (fund_id, name)
+        for name in metrics["unverifiable_reasons"]:
+            assert metrics[name] is None, (fund_id, name)
+            assert name not in metrics["metric_evidence"], (fund_id, name)
 
     assert [d["code"] for d in funds["F007"]["data_quality"]] == ["SMOOTH_RETURNS"]
     assert "DQ-F007-SMOOTH-RETURNS-NET-RETURN" in funds["F007"]["evidence_ids"]
@@ -298,3 +339,7 @@ def test_unavailable_benchmarks_zero_correlation_for_all(client: TestClient) -> 
         if fund["eligible"]:
             component = fund["score_components"]["low_correlation"]
             assert component["points"] == 0 and component["flag"] == "benchmark_unavailable"
+            benchmark = fund["benchmark"]
+            assert fund["metrics"]["unverifiable_reasons"]["correlation"] == (
+                f"Benchmark {benchmark} unavailable for this run"
+            )

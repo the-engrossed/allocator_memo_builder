@@ -37,8 +37,12 @@ def read_latest_ranking_run(
 ) -> RankingRunResponse:
     try:
         run = get_latest_ranking_run(db, analysis_id)
-    except (AnalysisNotFoundError, RankingRunNotFoundError) as exc:
+    except AnalysisNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RankingRunNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail={"code": "NO_RANKING_RUN", "message": str(exc)}
+        ) from exc
     return run_to_response(run)
 
 

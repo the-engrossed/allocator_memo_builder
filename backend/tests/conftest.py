@@ -125,5 +125,7 @@ def analysis_id(db_session: Session) -> uuid.UUID:
         column_mapping={},
     )
     db_session.add(analysis)
-    db_session.flush()
+    # Commit releases the savepoint so a failed request's rollback cannot discard the fixture;
+    # the outer test transaction still rolls everything back at teardown.
+    db_session.commit()
     return analysis.id

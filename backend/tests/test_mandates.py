@@ -266,7 +266,12 @@ def test_get_unconfigured_mandate_returns_404(
     response = client.get(_url(analysis_id))
 
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Mandate not configured for analysis {analysis_id}."}
+    assert response.json() == {
+        "detail": {
+            "code": "NO_MANDATE",
+            "message": f"Mandate not configured for analysis {analysis_id}.",
+        }
+    }
 
 
 def test_malformed_analysis_id_returns_422(client: TestClient) -> None:
