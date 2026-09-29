@@ -46,6 +46,8 @@ flowchart LR
 
 Routes are thin; all logic lives in `backend/app/services/`. Metrics, ranking, and the claim guard are pure functions with no I/O. Stack: React 19, TypeScript, Tailwind, Vite; Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, pandas/numpy; PostgreSQL 16; Docker Compose.
 
+Design decisions and trade-offs: see [DECISIONS.md](DECISIONS.md).
+
 ## Data model
 
 | Table | Holds |
@@ -149,7 +151,7 @@ Open <http://localhost:5173>. The API is at <http://localhost:8000/api/health>. 
 | `make test` | backend tests inside the API container against `allocator_test` |
 | `make logs` | follow API and web logs |
 
-On macOS, if `docker compose up` fails with `mkdir /host_mnt/...: operation not permitted`, Docker Desktop cannot read the folder the repo is in (common under `~/Documents`, `~/Desktop`, or `~/Downloads`). Move the repo elsewhere (for example `~/code`) or grant Docker access to that folder, then retry.
+On macOS, if `docker compose up` fails with `mkdir /host_mnt/...: operation not permitted`, Docker Desktop cannot read the folder the repo is in (common under `~/Documents`, `~/Desktop`, or `~/Downloads`). Grant Docker Desktop Full Disk Access (System Settings → Privacy & Security), then restart Docker. If that doesn't help, move the repo outside `~/Documents` (for example to `~/code`).
 
 ## Tests
 
