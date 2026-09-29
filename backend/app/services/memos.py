@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -17,6 +18,7 @@ from app.domain.schemas import (
     MemoClaimOut,
     MemoDraft,
     MemoResponse,
+    MemoSummaryOut,
 )
 from app.services.claim_guard import GuardContext, guard_memo
 from app.services.evidence_registry import EvidenceRecord, build_registry, selection_evidence_id
@@ -43,24 +45,37 @@ APPENDIX_METRICS = (
 )
 
 
+TEMPLATE_REQUESTED = "template requested"
+
+
 class MemoNotFoundError(LookupError):
     pass
 
 
-def create_memo(session: Session, run_id: uuid.UUID) -> MemoArtifact:
+class MemoInProgressError(RuntimeError):
+    """Another request took this revision number first."""
+
+
+def create_memo(
+    session: Session, run_id: uuid.UUID, *, force_template: bool = False
+) -> MemoArtifact:
     run = get_ranking_run(session, run_id)
     registry = build_registry(run)
     context = build_context(run, registry)
 
     token_usage: dict | None = None
     fallback_reason: str | None = None
-    try:
-        draft, token_usage, attempts = generate_llm_draft(context)
-        mode, model = "llm", settings.openai_model
-    except DraftFailure as failure:
+    if force_template:
         draft = generate_template_draft(context)
-        mode, model, fallback_reason = "template", None, failure.reason
-        attempts = failure.attempts
+        mode, model, fallback_reason, attempts = "template", None, TEMPLATE_REQUESTED, 0
+    else:
+        try:
+            draft, token_usage, attempts = generate_llm_draft(context)
+            mode, model = "llm", settings.openai_model
+        except DraftFailure as failure:
+            draft = generate_template_draft(context)
+            mode, model, fallback_reason = "template", None, failure.reason
+            attempts = failure.attempts
 
     claims = flatten_draft(draft)
     results, summary = guard_memo(
@@ -91,8 +106,38 @@ def create_memo(session: Session, run_id: uuid.UUID) -> MemoArtifact:
         created_at=datetime.now(timezone.utc),
     )
     session.add(memo)
-    session.flush()
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise MemoInProgressError(
+            f"Another memo for ranking run {run_id} took revision {memo.revision}; "
+            "generation is already in progress."
+        ) from exc
     return memo
+
+
+def list_memos(session: Session, run_id: uuid.UUID) -> list[MemoArtifact]:
+    get_ranking_run(session, run_id)
+    return list(
+        session.scalars(
+            select(MemoArtifact)
+            .where(MemoArtifact.ranking_run_id == run_id)
+            .order_by(MemoArtifact.revision)
+        )
+    )
+
+
+def memo_summary(memo: MemoArtifact) -> MemoSummaryOut:
+    return MemoSummaryOut(
+        memo_id=memo.id,
+        revision=memo.revision,
+        generation_mode=memo.generation_mode,
+        model=memo.model,
+        fallback_reason=memo.fallback_reason,
+        created_at=memo.created_at,
+        guard_status=memo.guard_summary.get("status", "flagged"),
+    )
 
 
 def get_memo(session: Session, memo_id: uuid.UUID) -> MemoArtifact:

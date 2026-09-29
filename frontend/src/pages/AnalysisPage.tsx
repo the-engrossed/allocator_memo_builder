@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { createRankingRun, getLatestRankingRun, getMandate } from "../api/client";
+import { createRankingRun, getLatestRankingRun, getMandate, getRunEvidence } from "../api/client";
+import { EvidenceDrawerProvider } from "../components/EvidenceDrawerContext";
 import { ExcludedFunds } from "../components/ExcludedFunds";
 import { FundMetricsTable } from "../components/FundMetricsTable";
 import { ProvenanceBar } from "../components/ProvenanceBar";
@@ -18,7 +19,12 @@ const FOOTER =
   "Deterministic screening and baseline ranking (policy v1). Benchmarks from Yahoo Finance and " +
   "FRED with cached/snapshot fallback. Not investment advice.";
 
-export function AnalysisPage({ analysis }: { analysis: AnalysisResponse }) {
+interface AnalysisPageProps {
+  analysis: AnalysisResponse;
+  onRunCreated: () => void;
+}
+
+export function AnalysisPage({ analysis, onRunCreated }: AnalysisPageProps) {
   const analysisId = analysis.analysis_id;
   const [mandate, setMandate] = useState<Load<boolean>>({ status: "loading" });
   const [run, setRun] = useState<Load<RankingRunResponse | null>>({ status: "loading" });
@@ -67,6 +73,7 @@ export function AnalysisPage({ analysis }: { analysis: AnalysisResponse }) {
       const created = await createRankingRun(analysisId);
       setRun({ status: "ready", value: created });
       setPost({ status: "idle" });
+      onRunCreated();
     } catch (cause) {
       setPost({ status: "error", message: errorMessage(cause, "The ranking run failed.") });
     }
@@ -123,12 +130,24 @@ export function AnalysisPage({ analysis }: { analysis: AnalysisResponse }) {
               against the saved mandate.
             </p>
           )}
-          {run.status === "ready" && run.value && <RunView run={run.value} />}
+          {run.status === "ready" && run.value && (
+            <RunWithEvidence run={run.value} />
+          )}
         </>
       )}
 
       <footer className="border-t border-slate-800 pt-4 text-xs text-slate-500">{FOOTER}</footer>
     </div>
+  );
+}
+
+function RunWithEvidence({ run }: { run: RankingRunResponse }) {
+  const runId = run.run_id;
+  const load = useCallback(() => getRunEvidence(runId), [runId]);
+  return (
+    <EvidenceDrawerProvider cacheKey={runId} load={load}>
+      <RunView run={run} />
+    </EvidenceDrawerProvider>
   );
 }
 

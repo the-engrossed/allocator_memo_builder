@@ -260,6 +260,24 @@ class MemoResponse(BaseModel):
     token_usage: dict | None
 
 
+class MemoCreate(BaseModel):
+    """Optional POST body; "template" skips the LLM and records "template requested"."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["auto", "template"] = "auto"
+
+
+class MemoSummaryOut(BaseModel):
+    memo_id: UUID
+    revision: int
+    generation_mode: Literal["llm", "template"]
+    model: str | None
+    fallback_reason: str | None
+    created_at: datetime
+    guard_status: Literal["clean", "flagged"]
+
+
 class HealthResponse(BaseModel):
     status: str
     db: bool = Field(description="True when the API can query PostgreSQL")

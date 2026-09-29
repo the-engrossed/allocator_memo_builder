@@ -149,6 +149,115 @@ export interface RunWarning {
   details: Record<string, unknown>;
 }
 
+// --- Memos and evidence (Phase 4). Values are pre-formatted by the backend. ---
+
+export type EvidenceType =
+  | "metric"
+  | "source_field"
+  | "data_quality"
+  | "screen_result"
+  | "selection"
+  | "benchmark"
+  | "run_warning";
+export type VerificationStatus = "verified" | "unverifiable" | "invalid" | "missing";
+
+export interface EvidenceRecord {
+  evidence_id: string;
+  type: EvidenceType;
+  fund_id: string | null;
+  label: string;
+  display_value: string;
+  verification_status: VerificationStatus;
+  provenance: Record<string, unknown>;
+}
+
+export interface EvidenceRegistryResponse {
+  ranking_run_id: string;
+  records: EvidenceRecord[];
+}
+
+export type MemoSection = "executive_summary" | "recommendation" | "shortlist_rationale" | "key_risks";
+
+export interface GuardReason {
+  code: string;
+  message: string;
+}
+
+export interface MemoClaim {
+  claim_id: string;
+  section: MemoSection;
+  position: number;
+  rationale_fund_id: string | null;
+  text: string;
+  evidence_ids: string[];
+  claim_type: "quantitative" | "qualitative" | "judgment";
+  fund_id: string | null;
+  guard_status: "ok" | "flagged";
+  guard_reasons: GuardReason[];
+}
+
+export interface GuardSummary {
+  total: number;
+  ok: number;
+  flagged: number;
+  memo_issues: GuardReason[];
+  status: "clean" | "flagged";
+}
+
+export interface AppendixCell {
+  evidence_id: string | null;
+  display_value: string;
+  verification_status: VerificationStatus;
+  reason?: string | null;
+  screen?: string;
+}
+
+export interface MemoAppendix {
+  generated_from: { ranking_run_id: string; policy_version: string; mandate_sha256: string };
+  mandate: Record<string, unknown>;
+  metrics: Array<{
+    fund_id: string;
+    eligible: boolean;
+    rank: number | null;
+    benchmark: string;
+    window_start: string | null;
+    window_end: string | null;
+    metrics: Record<string, AppendixCell>;
+  }>;
+  screens: Array<{ fund_id: string; eligible: boolean; screens: Array<AppendixCell | null> }>;
+  selection: Array<{ fund_id: string; rank: number | null } & Partial<AppendixCell>>;
+  benchmarks: EvidenceRecord[];
+  run_warnings: EvidenceRecord[];
+}
+
+export interface MemoResponse {
+  memo_id: string;
+  ranking_run_id: string;
+  analysis_id: string;
+  revision: number;
+  generation_mode: "llm" | "template";
+  model: string | null;
+  prompt_version: string;
+  fallback_reason: string | null;
+  llm_attempts: number | null;
+  created_at: string;
+  claims: MemoClaim[];
+  guard_summary: GuardSummary;
+  appendix: MemoAppendix;
+  evidence_snapshot: EvidenceRecord[];
+  token_usage: { input_tokens: number | null; output_tokens: number | null; total_tokens: number | null } | null;
+}
+
+export interface MemoSummary {
+  memo_id: string;
+  revision: number;
+  generation_mode: "llm" | "template";
+  model: string | null;
+  fallback_reason: string | null;
+  created_at: string;
+  guard_status: "clean" | "flagged";
+}
+
 export interface RankingRunResponse {
   run_id: string;
   analysis_id: string;

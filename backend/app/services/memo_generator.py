@@ -241,7 +241,7 @@ def _user_prompt(context: MemoContext) -> str:
                 "fund_id": record.fund_id,
                 "label": record.label,
                 "display_value": (
-                    "<see untrusted_fund_data>"
+                    "(see untrusted_fund_data)"
                     if record.provenance.get("untrusted_text")
                     else record.display_value
                 ),
@@ -265,11 +265,16 @@ def _user_prompt(context: MemoContext) -> str:
     ]
     return (
         "<run_facts>\n"
-        + json.dumps(facts, indent=1, sort_keys=True)
+        + _tag_safe_json(facts, sort_keys=True)
         + "\n</run_facts>\n\n<untrusted_fund_data>\n"
-        + json.dumps(untrusted, indent=1, ensure_ascii=False)
+        + _tag_safe_json(untrusted, ensure_ascii=False)
         + "\n</untrusted_fund_data>\n\nWrite the memo draft now."
     )
+
+
+def _tag_safe_json(value: object, **options: object) -> str:
+    """JSON with < and > escaped, so embedded text can never open or close a prompt tag."""
+    return json.dumps(value, indent=1, **options).replace("<", "\\u003c").replace(">", "\\u003e")
 
 
 def _has_refusal(response: object) -> bool:

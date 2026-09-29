@@ -27,7 +27,7 @@ interface AppShellProps {
 export function AppShell({ activeStep, steps, onSelectStep, children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-slate-950">
-      <header className="border-b border-slate-800 bg-slate-950/90">
+      <header className="border-b border-slate-800 bg-slate-950/90 print:hidden">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-5">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-cyan-400">
