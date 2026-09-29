@@ -11,6 +11,7 @@ first of the month, and the current (partial) month is dropped.
 
 import csv
 import json
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -33,8 +34,27 @@ FRED_SERIES_ID = "DGS3MO"
 FRED_URL = "https://api.stlouisfed.org/fred/series/observations"
 
 
+_SECRET_QUERY_PARAM = re.compile(r"(?i)\b(api_key|apikey|access_token|token)=[^&\s'\"]*")
+
+
 class MarketDataError(RuntimeError):
-    pass
+    """Raised with messages written in this module; they never contain request URLs."""
+
+
+def redact_secrets(text: str) -> str:
+    """Replace the value of any api_key/token query parameter with REDACTED."""
+    return _SECRET_QUERY_PARAM.sub(lambda match: f"{match.group(1)}=REDACTED", text)
+
+
+def failure_reason(exc: BaseException) -> str:
+    """A short, URL-free description of a failed fetch, safe to persist and return."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"HTTP {exc.response.status_code}"
+    if isinstance(exc, (httpx.TimeoutException, TimeoutError)):
+        return "timeout"
+    if isinstance(exc, MarketDataError):
+        return redact_secrets(str(exc))
+    return type(exc).__name__
 
 
 @dataclass(frozen=True)
@@ -55,7 +75,7 @@ class SeriesProvenance:
             "retrieved_at": self.retrieved_at.isoformat() if self.retrieved_at else None,
             "coverage_start": self.coverage_start.isoformat() if self.coverage_start else None,
             "coverage_end": self.coverage_end.isoformat() if self.coverage_end else None,
-            "message": self.message,
+            "message": redact_secrets(self.message),
         }
 
 
@@ -174,7 +194,7 @@ def resolve_benchmark(
         if len(closes) < 2:
             raise MarketDataError(f"Yahoo Finance returned too little history for {ticker}.")
     except Exception as exc:  # yfinance and its HTTP stack raise many exception types
-        failure = f"Live fetch failed: {exc}"
+        failure = f"Live fetch failed: {failure_reason(exc)}."
     else:
         _write_cache(cache_dir, "yfinance", ticker, closes, now)
         return _benchmark_series(ticker, closes, SeriesState.LIVE, now, "Fetched from Yahoo Finance.")
@@ -227,7 +247,7 @@ def resolve_risk_free(
             if rates.empty:
                 raise MarketDataError("FRED returned no complete months.")
         except Exception as exc:  # httpx, JSON, and HTTP status errors
-            failure = f"Live fetch failed: {exc}"
+            failure = f"Live fetch failed: {failure_reason(exc)}."
         else:
             _write_cache(cache_dir, "fred", FRED_SERIES_ID, rates, now)
             return _rate_series(rates, SeriesState.LIVE, now, "Fetched from FRED.")

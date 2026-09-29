@@ -385,6 +385,8 @@ def _evidence_ids(fund_id: str, item: dict) -> list[str]:
         )
         if metrics.correlation is not None:
             ids.append(f"MET-{key}-CORRELATION-{metrics.benchmark}")
+        if metrics.excess_return_bps is not None:
+            ids.append(f"MET-{key}-EXCESS-VS-{metrics.benchmark}")
     ids.extend(screen.code for screen in item["screens"])
     ids.extend(issue["evidence_id"] for issue in item["data_quality"])
     return ids

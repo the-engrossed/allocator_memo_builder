@@ -1,0 +1,8 @@
+cat > .cursorignore <<'EOF'
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+EOF

@@ -100,6 +100,24 @@ def correlation(returns: pd.Series, benchmark: pd.Series) -> tuple[float | None,
     return float(np.corrcoef(fund, bench)[0, 1]), overlap
 
 
+def excess_annualized_return(
+    returns: pd.Series, benchmark: pd.Series
+) -> tuple[float | None, int]:
+    """Fund CAGR minus benchmark CAGR over their overlapping months, and the overlap count.
+
+    Unverifiable (None) below 12 overlapping months.
+    """
+    aligned = pd.concat([returns, benchmark], axis=1, join="inner").dropna()
+    overlap = len(aligned)
+    if overlap < MIN_OVERLAP_MONTHS_CORRELATION:
+        return None, overlap
+    fund = annualized_return(aligned.iloc[:, 0])
+    bench = annualized_return(aligned.iloc[:, 1])
+    if fund is None or bench is None:
+        return None, overlap
+    return fund - bench, overlap
+
+
 def risk_free_for_window(
     rates: pd.Series, start: date | None, end: date | None, fallback_annual: float
 ) -> tuple[float, str]:
@@ -127,6 +145,7 @@ class FundMetrics:
     risk_free_annual_bps: int
     risk_free_source: str
     target_gap_bps: int | None
+    excess_return_bps: int | None = None
 
     def to_json(self) -> dict:
         data = asdict(self)
@@ -150,9 +169,10 @@ def compute_fund_metrics(
     drawdown = max_drawdown(returns)
     sharpe = sharpe_ratio(returns, risk_free_annual)
     if benchmark_returns is None or benchmark_returns.empty:
-        corr, overlap = None, 0
+        corr, overlap, excess = None, 0, None
     else:
         corr, overlap = correlation(returns, benchmark_returns)
+        excess, _ = excess_annualized_return(returns, benchmark_returns)
     return_bps = None if cagr is None else to_bps(cagr)
     return FundMetrics(
         months_of_history=months_of_history(returns),
@@ -169,6 +189,7 @@ def compute_fund_metrics(
         risk_free_annual_bps=annual_rate_to_bps(risk_free_annual),
         risk_free_source=risk_free_source,
         target_gap_bps=None if return_bps is None else return_bps - target_return_bps,
+        excess_return_bps=None if excess is None else to_bps(excess),
     )
 
 

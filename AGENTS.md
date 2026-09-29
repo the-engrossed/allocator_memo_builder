@@ -125,6 +125,9 @@ V1 metrics only (definitions in `app/services/metrics.py`):
   months; unverifiable below 12 overlapping months.
 - Months of return history.
 - `target_gap_bps = annualized_return_bps − target_return_bps` (reporting only).
+- `excess_return_bps` (`MET-{fund}-EXCESS-VS-{BMK}`): fund CAGR − mapped benchmark CAGR over
+  their overlapping months; unverifiable below 12 overlapping months or when the benchmark
+  is unavailable. Reporting only, never scored.
 
 Numeric policy: metrics are computed with pandas/numpy floats and rounded **once**, when
 persisted and before any comparison to a mandate threshold — to integer bps (half away from
@@ -214,6 +217,13 @@ V1 validation must cover:
   `monthly | quarterly | semiannual | annual` (error; hard screens read these fields).
 - Implausibly smooth returns (`SMOOTH_RETURNS` warning): no negative month across ≥24
   observations, or annualized volatility < 1% with ≥12 observations.
+- Possible duplicate identities (`FUND_ID_MISMATCH` warning): the same normalized fund name
+  (casefolded, non-alphanumerics removed) under more than one `fund_id`, or `fund_id`s that
+  differ only by case, whitespace, or punctuation.
+- Misaligned histories (`INCONSISTENT_DATE_RANGE` warning): a fund whose last period is
+  before the universe's latest period, or whose first period is after the common window
+  start. The common window runs from the median fund start to the latest period and is
+  returned in the analysis response.
 
 Bare numeric returns (no `%` suffix) are interpreted **per fund**, never once for the whole
 file: percentage points when the median |value| > 0.25, otherwise decimals, with a warning

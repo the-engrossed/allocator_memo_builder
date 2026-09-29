@@ -79,6 +79,19 @@ This is a warning. It does not block the fund or affect the screens and ranking.
 
 **Consequence:** In the sample universe only F007 triggers it, with 60 months, no losses, and about 0.4% volatility. F007 will still rank highly until a human acts on the warning, and the memo should cite the warning next to its metrics.
 
+## Identity and date-range checks are warnings; the common window starts at the median fund start
+
+**Choice:**
+- `FUND_ID_MISMATCH` warns every fund in a group whose first-row fund names are equal after casefolding and removing non-alphanumerics. It also warns groups whose `fund_id`s are equal under the same normalization.
+- `INCONSISTENT_DATE_RANGE` warns a fund that ends before the universe's latest period, or starts after the common window start.
+- The common window runs from the **median** fund start (the lower median) to the latest period in the universe. It is returned in the analysis response, along with how many funds fully cover it.
+
+Both checks are warnings only. They never block a fund or merge funds, and they don't affect screening.
+
+**Why:** A strict intersection of all funds' ranges can't be used for "starts after the common window start", because by definition no fund starts after the latest start. It would also collapse to one fund's history as soon as a single recent launch joined the universe. The median start describes where most of the universe begins, and one late fund can't move it. Merging look-alike funds automatically would be silent remediation; flagging them leaves the decision to the allocator.
+
+**Consequence:** In the sample, five funds warn on start date (F002, F004, F008, F009, F010), and F004 also warns for ending in May 2026. These are informational. Funds are still measured over their own windows, as the policy requires.
+
 ## Slice 3 acceptance: app metrics reproduce the sample generator (closed)
 
 **Issue:** F003 (drawdown about 18.6%) and F006 (about 18.4%) pass the default 20% drawdown cap narrowly. How missing months are handled could have moved these figures enough to flip a narrow pass. For example, F004 skips a month and F006 loses its unparseable November 2023 row.

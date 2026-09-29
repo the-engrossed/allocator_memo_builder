@@ -13,6 +13,8 @@ from app.services.ingestion import (
     parse_mapped_rows,
 )
 from app.services.validation import (
+    CommonWindow,
+    common_window,
     derive_status,
     is_analysis_blocked,
     select_observations,
@@ -334,6 +336,98 @@ def test_invalid_metadata_groups_rows_per_fund_and_field() -> None:
     )
     issues = [i for i in _validate(parsed) if i.code is IssueCode.INVALID_METADATA]
     assert sorted((i.fund_id, i.row_numbers) for i in issues) == [("F001", [1, 2]), ("F002", [3])]
+
+
+def _mismatch(issues) -> dict[str, list[str]]:
+    return {
+        issue.fund_id: issue.details["reasons"]
+        for issue in issues
+        if issue.code is IssueCode.FUND_ID_MISMATCH
+    }
+
+
+def test_same_normalized_name_under_two_ids_is_a_mismatch() -> None:
+    parsed = _parse(
+        [
+            _row(1, "F001", "2023-01", "0.01", fund_name="Alpha Partners, L.P."),
+            _row(2, "F002", "2023-01", "0.01", fund_name="alpha  partners LP"),
+            _row(3, "F003", "2023-01", "0.01", fund_name="Beta Fund"),
+        ]
+    )
+    issues = _validate(parsed)
+    assert _mismatch(issues) == {"F001": ["same_fund_name"], "F002": ["same_fund_name"]}
+    issue = next(i for i in issues if i.code is IssueCode.FUND_ID_MISMATCH and i.fund_id == "F001")
+    assert issue.severity is IssueSeverity.WARNING
+    assert issue.details["related_fund_ids"] == ["F002"]
+
+
+def test_ids_differing_only_by_case_or_punctuation_are_a_mismatch() -> None:
+    parsed = _parse(
+        [
+            _row(1, "F001", "2023-01", "0.01", fund_name="One"),
+            _row(2, "f-001", "2023-01", "0.01", fund_name="Two"),
+            _row(3, "F 001", "2023-01", "0.01", fund_name="Three"),
+            _row(4, "F0010", "2023-01", "0.01", fund_name="Four"),
+        ]
+    )
+    mismatches = _mismatch(_validate(parsed))
+    assert mismatches == {
+        "F001": ["similar_fund_id"],
+        "f-001": ["similar_fund_id"],
+        "F 001": ["similar_fund_id"],
+    }
+
+
+def test_distinct_names_and_ids_are_not_a_mismatch() -> None:
+    parsed = _parse(
+        [
+            _row(1, "F001", "2023-01", "0.01", fund_name="Alpha"),
+            _row(2, "F002", "2023-01", "0.01", fund_name="Alpha II"),
+        ]
+    )
+    assert IssueCode.FUND_ID_MISMATCH not in _codes(_validate(parsed))
+
+
+def _span(fund_id: str, start: str, months: int, first_row: int) -> list[MappedRow]:
+    year, month = int(start[:4]), int(start[5:])
+    rows = []
+    for index in range(months):
+        rows.append(_row(first_row + index, fund_id, f"{year}-{month:02d}", "0.01"))
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return rows
+
+
+def test_common_window_is_median_start_to_latest_period() -> None:
+    periods = {
+        "A": [date(2021, 1, 1), date(2024, 12, 1)],
+        "B": [date(2021, 1, 1), date(2024, 12, 1)],
+        "C": [date(2022, 6, 1), date(2024, 9, 1)],
+    }
+    window = common_window(periods)
+    assert window == CommonWindow(
+        start=date(2021, 1, 1), end=date(2024, 12, 1), fund_count=3, funds_covering=2
+    )
+    assert common_window({}) is None
+
+
+def test_funds_ending_early_or_starting_late_get_a_date_range_warning() -> None:
+    rows = [
+        *_span("A", "2021-01", 36, 1),
+        *_span("B", "2021-01", 36, 100),
+        *_span("C", "2021-01", 30, 200),
+        *_span("D", "2022-01", 24, 300),
+    ]
+    issues = [i for i in _validate(_parse(rows)) if i.code is IssueCode.INCONSISTENT_DATE_RANGE]
+    flagged = {i.fund_id: (i.details["ends_early"], i.details["starts_late"]) for i in issues}
+    assert flagged == {"C": (True, False), "D": (False, True)}
+    assert all(i.severity is IssueSeverity.WARNING for i in issues)
+    assert issues[0].details["common_window_start"] == "2021-01-01"
+    assert issues[0].details["common_window_end"] == "2023-12-01"
+
+
+def test_aligned_funds_have_no_date_range_warning() -> None:
+    rows = [*_span("A", "2021-01", 24, 1), *_span("B", "2021-01", 24, 100)]
+    assert IssueCode.INCONSISTENT_DATE_RANGE not in _codes(_validate(_parse(rows)))
 
 
 def test_status_valid_with_warnings() -> None:

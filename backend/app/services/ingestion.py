@@ -16,7 +16,12 @@ from sqlalchemy.orm import Session
 
 from app.domain.enums import LiquidityFrequency, ReturnInputUnit
 from app.domain.models import Analysis, ReturnObservation, SourceRow, ValidationIssue as IssueRow
-from app.domain.schemas import AnalysisResponse, FundSummaryOut, ValidationIssueOut
+from app.domain.schemas import (
+    AnalysisResponse,
+    CommonWindowOut,
+    FundSummaryOut,
+    ValidationIssueOut,
+)
 
 CANONICAL_COLUMNS: tuple[str, ...] = (
     "fund_id",
@@ -468,7 +473,12 @@ def create_analysis(db: Session, *, filename: str, content: bytes) -> Analysis:
 
 def analysis_to_response(analysis: Analysis) -> AnalysisResponse:
     from app.domain.enums import IssueCode, IssueSeverity
-    from app.services.validation import ValidationIssue, is_analysis_blocked
+    from app.services.validation import ValidationIssue, common_window, is_analysis_blocked
+
+    periods_by_fund: dict[str, list[date]] = defaultdict(list)
+    for observation in analysis.return_observations:
+        periods_by_fund[observation.fund_id].append(observation.period)
+    window = common_window(periods_by_fund)
 
     typed_issues = [
         ValidationIssue(
@@ -506,6 +516,16 @@ def analysis_to_response(analysis: Analysis) -> AnalysisResponse:
             for issue in analysis.validation_issues
         ],
         funds=funds,
+        common_window=(
+            None
+            if window is None
+            else CommonWindowOut(
+                start=window.start,
+                end=window.end,
+                fund_count=window.fund_count,
+                funds_covering=window.funds_covering,
+            )
+        ),
     )
 
 

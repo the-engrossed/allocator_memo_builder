@@ -27,6 +27,7 @@ DEFAULT_MANDATE = {
     "max_candidates": 5,
 }
 ELIGIBLE = {"F001", "F002", "F003", "F004", "F006", "F007"}
+EXCLUDED = {"F005", "F008", "F009", "F010"}
 SELECTED = {"SELECTED_PREFERENCE_PASS", "SELECTED_RANK_PASS"}
 
 
@@ -84,6 +85,19 @@ def _generator_risk_bps(fund_id: str) -> tuple[int, int]:
     return round(drawdown * 10_000), round(volatility * 10_000)
 
 
+def test_sample_upload_reports_common_window(client: TestClient) -> None:
+    with SAMPLE.open("rb") as handle:
+        body = client.post(
+            "/api/analyses", files={"file": ("sample.csv", handle, "text/csv")}
+        ).json()
+    assert body["common_window"] == {
+        "start": "2021-09-01",
+        "end": "2026-08-01",
+        "fund_count": 10,
+        "funds_covering": 5,
+    }
+
+
 def test_missing_analysis_is_404(client: TestClient) -> None:
     missing = uuid.uuid4()
     assert client.post(f"/api/analyses/{missing}/ranking-runs").status_code == 404
@@ -104,13 +118,17 @@ def test_sample_universe_end_to_end(client: TestClient, live_benchmarks: None) -
     funds = _funds(body)
 
     assert {f for f, fund in funds.items() if fund["eligible"]} == ELIGIBLE
+    assert {f for f, fund in funds.items() if not fund["eligible"]} == EXCLUDED
     assert _failed(funds["F005"]) == {"LIQUIDITY", "LOCKUP"}
     assert _failed(funds["F008"]) == {"TRACK-RECORD"}
+    assert _failed(funds["F010"]) == {"TRACK-RECORD"}
     assert "BLOCKING-VALIDATION" in _failed(funds["F009"]) and funds["F009"]["metrics"] is None
     assert "SCR-F005-LOCKUP-FAIL" in funds["F005"]["evidence_ids"]
 
     assert [d["code"] for d in funds["F007"]["data_quality"]] == ["SMOOTH_RETURNS"]
     assert "DQ-F007-SMOOTH-RETURNS" in funds["F007"]["evidence_ids"]
+    assert "DQ-F001-FUND-ID-MISMATCH" in funds["F001"]["evidence_ids"]
+    assert "DQ-F004-INCONSISTENT-DATE-RANGE" in funds["F004"]["evidence_ids"]
     assert not any(
         d["code"] == "SMOOTH_RETURNS" for f, fund in funds.items() if f != "F007"
         for d in fund["data_quality"]
@@ -130,10 +148,15 @@ def test_sample_universe_end_to_end(client: TestClient, live_benchmarks: None) -
     assert provenance["risk_free"]["state"] == "fallback"
     assert funds["F002"]["benchmark"] == "AGG" and funds["F001"]["benchmark"] == "SPY"
     assert funds["F001"]["metrics"]["correlation"] is not None
+    assert funds["F001"]["metrics"]["excess_return_bps"] is not None
+    assert "MET-F001-EXCESS-VS-SPY" in funds["F001"]["evidence_ids"]
+    assert "MET-F002-EXCESS-VS-AGG" in funds["F002"]["evidence_ids"]
+    assert funds["F010"]["metrics"]["excess_return_bps"] is None
+    assert not any("EXCESS" in name for name in funds["F001"]["score_components"])
 
     ranks = sorted(fund["rank"] for fund in funds.values() if fund["eligible"])
     assert ranks == list(range(1, 7))
-    assert body["summary"] == {"evaluated": 9, "eligible": 6, "excluded": 3, "shortlisted": 5}
+    assert body["summary"] == {"evaluated": 10, "eligible": 6, "excluded": 4, "shortlisted": 5}
     assert body["warnings"] == []
     reasons = [fund["selection_reason"] for fund in body["funds"] if fund["eligible"]]
     assert reasons.count("CAPACITY_REACHED") == 1
@@ -180,6 +203,38 @@ def test_run_is_immutable_after_mandate_put(client: TestClient, live_benchmarks:
     assert client.get(f"/api/analyses/{analysis_id}/ranking-runs/latest").json()["run_id"] == (
         second["run_id"]
     )
+
+
+def test_fred_api_key_never_reaches_the_ranking_run_response(
+    client: TestClient, live_benchmarks: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.config import settings
+    from tests.test_benchmarks import REAL_FETCH_FRED, _leaky_fred_error
+
+    monkeypatch.setattr(settings, "fred_api_key", "SECRET123")
+    monkeypatch.setattr(benchmarks, "fetch_fred_monthly_rates", REAL_FETCH_FRED)
+    monkeypatch.setattr(benchmarks.httpx, "get", _leaky_fred_error)
+
+    analysis_id = _sample_analysis(client)
+    response = client.post(f"/api/analyses/{analysis_id}/ranking-runs")
+    assert response.status_code == 201
+    assert response.json()["benchmark_provenance"]["risk_free"]["message"].startswith(
+        "Live fetch failed: HTTP 400."
+    )
+    assert "SECRET123" not in response.text
+    assert "SECRET123" not in client.get(f"/api/analyses/{analysis_id}/ranking-runs/latest").text
+
+
+def test_health_reports_only_booleans(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "fred_api_key", "SECRET123")
+    monkeypatch.setattr(settings, "openai_api_key", "sk-SECRET456")
+    response = client.get("/api/health")
+    assert response.json() == {
+        "status": "ok", "db": True, "openai_configured": True, "fred_configured": True,
+    }
+    assert "SECRET" not in response.text
 
 
 def test_unavailable_benchmarks_zero_correlation_for_all(client: TestClient) -> None:

@@ -8,7 +8,8 @@ _APP_DIR = Path(__file__).resolve().parent
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Later files take precedence; real environment variables override both.
+    model_config = SettingsConfigDict(env_file=(".env", "../.env"), extra="ignore")
 
     database_url: str = "postgresql+psycopg://allocator:allocator@postgres:5432/allocator"
     openai_api_key: str = ""

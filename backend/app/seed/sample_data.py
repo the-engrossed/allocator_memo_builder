@@ -10,6 +10,9 @@ the demo cases the screens and validation are meant to catch:
 - F003 and F006 pass a 20% drawdown cap narrowly (about 18.6% and 18.4%).
 - F005 fails the liquidity and lockup screens (semiannual redemptions, 24-month lockup).
 - F006 has one unparseable return; F004 skips a month; F001 has one conflicting notice period.
+- F004 stops reporting after May 2026 (INCONSISTENT_DATE_RANGE: ends before the universe).
+- F010 is F001's feeder reported under its own id with the same name in different casing
+  (FUND_ID_MISMATCH on F001 and F010); 8 months of history, so it fails a 36-month minimum.
 - F007 is suspiciously smooth (SMOOTH_RETURNS): no down month and near-zero volatility.
 - F008 has only 11 months of history (short-history warning, fails a 36-month minimum).
 - F009 breaches volatility and drawdown caps, has a non-integer performance fee, one invalid
@@ -64,6 +67,7 @@ class FundSpec:
     perf_fee_bps: str
     notes: str
     start_month: date
+    end_month: date | None
     alpha: float
     beta: float
     sigma: float
@@ -91,6 +95,7 @@ FUNDS: tuple[FundSpec, ...] = (
         perf_fee_bps="2000",
         notes="Fundamental long/short; net exposure 30-60%.",
         start_month=date(2021, 9, 1),
+        end_month=None,
         alpha=0.0050,
         beta=0.70,
         sigma=0.014,
@@ -109,6 +114,7 @@ FUNDS: tuple[FundSpec, ...] = (
         perf_fee_bps="1500",
         notes="Performing and stressed corporate credit; gates at 25% per quarter.",
         start_month=date(2022, 9, 1),
+        end_month=None,
         alpha=0.0055,
         beta=0.18,
         sigma=0.008,
@@ -128,6 +134,7 @@ FUNDS: tuple[FundSpec, ...] = (
         perf_fee_bps="2000",
         notes="Discretionary rates and FX; reports returns in percentage points.",
         start_month=date(2021, 9, 1),
+        end_month=None,
         alpha=0.0065,
         beta=-0.10,
         sigma=0.026,
@@ -145,8 +152,12 @@ FUNDS: tuple[FundSpec, ...] = (
         lockup_months="12",
         mgmt_fee_bps="175",
         perf_fee_bps="2000",
-        notes="Pod-based platform; pass-through expenses not included in the fee.",
+        notes=(
+            "Pod-based platform; pass-through expenses not included in the fee. "
+            "June-August 2026 returns not yet reported."
+        ),
         start_month=date(2022, 3, 1),
+        end_month=date(2026, 5, 1),
         alpha=0.0060,
         beta=0.25,
         sigma=0.008,
@@ -165,6 +176,7 @@ FUNDS: tuple[FundSpec, ...] = (
         perf_fee_bps="2000",
         notes="Merger arbitrage and special situations; 24-month hard lockup.",
         start_month=date(2021, 9, 1),
+        end_month=None,
         alpha=0.0055,
         beta=0.30,
         sigma=0.011,
@@ -183,6 +195,7 @@ FUNDS: tuple[FundSpec, ...] = (
         perf_fee_bps="1750",
         notes="Systematic multi-asset trend and carry.",
         start_month=date(2021, 9, 1),
+        end_month=None,
         alpha=0.0090,
         beta=0.10,
         sigma=0.028,
@@ -205,6 +218,7 @@ FUNDS: tuple[FundSpec, ...] = (
             "administrator; auditor is a two-partner local firm."
         ),
         start_month=date(2021, 9, 1),
+        end_month=None,
         alpha=0.0085,
         beta=0.0,
         sigma=0.0012,
@@ -223,6 +237,7 @@ FUNDS: tuple[FundSpec, ...] = (
         perf_fee_bps="2000",
         notes="Launched October 2025; spun out of a large long-only manager.",
         start_month=date(2025, 10, 1),
+        end_month=None,
         alpha=0.0120,
         beta=0.60,
         sigma=0.020,
@@ -240,6 +255,7 @@ FUNDS: tuple[FundSpec, ...] = (
         perf_fee_bps="20%",
         notes="Liquid tokens and basis trades; custody with a single exchange.",
         start_month=date(2022, 3, 1),
+        end_month=None,
         alpha=0.010,
         beta=1.5,
         sigma=0.14,
@@ -248,6 +264,24 @@ FUNDS: tuple[FundSpec, ...] = (
         shocks={"2022-05": -0.30, "2022-06": -0.35, "2022-11": -0.22},
         raw_returns={"2024-03": "0.62"},
         raw_periods={"2023-09": "2023-13"},
+    ),
+    FundSpec(
+        fund_id="F010",
+        fund_name="NorthStar Equity Partners",
+        strategy="Equity L/S",
+        liquidity_frequency="monthly",
+        notice_days="30",
+        lockup_months="12",
+        mgmt_fee_bps="150",
+        perf_fee_bps="2000",
+        notes="Onshore feeder; the administrator reports it under its own identifier.",
+        start_month=date(2026, 1, 1),
+        end_month=None,
+        alpha=0.0050,
+        beta=0.70,
+        sigma=0.014,
+        seed=1010,
+        period_format="%Y-%m",
     ),
 )
 
@@ -276,7 +310,7 @@ def fund_returns(spec: FundSpec) -> list[tuple[date, float]]:
     for index, market in enumerate(MARKET):
         month = _add_months(FIRST_MONTH, index)
         noise = rng.gauss(0.0, spec.sigma)
-        if month < spec.start_month:
+        if month < spec.start_month or (spec.end_month and month > spec.end_month):
             continue
         value = spec.alpha + spec.beta * market + noise + spec.shocks.get(_key(month), 0.0)
         if spec.floor is not None:

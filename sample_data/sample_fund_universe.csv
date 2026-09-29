@@ -167,59 +167,56 @@ F003,Cedar Global Macro,Macro,05/2026,2.82,Monthly,5,0,200,2000,Discretionary ra
 F003,Cedar Global Macro,Macro,06/2026,6.38,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
 F003,Cedar Global Macro,Macro,07/2026,6.59,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
 F003,Cedar Global Macro,Macro,08/2026,2.07,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-03-31,0.0121,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-04-30,-0.0138,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-05-31,0.0148,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-06-30,-0.0230,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-07-31,0.0190,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-08-31,-0.0033,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-09-30,-0.0127,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-10-31,0.0356,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-11-30,0.0195,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2022-12-31,-0.0138,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-01-31,0.0275,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-02-28,0.0069,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-03-31,0.0203,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-04-30,0.0158,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-05-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-06-30,0.0247,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-07-31,0.0059,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-08-31,0.0140,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-09-30,-0.0115,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-10-31,-0.0011,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-11-30,0.0321,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2023-12-31,0.0181,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-01-31,0.0235,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-03-31,0.0057,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-04-30,-0.0105,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-05-31,0.0203,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-06-30,0.0116,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-07-31,0.0115,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-08-31,-0.0030,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-09-30,0.0073,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-10-31,0.0159,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-11-30,0.0152,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2024-12-31,0.0104,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-01-31,0.0127,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-02-28,0.0078,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-03-31,-0.0030,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-04-30,0.0035,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-05-31,0.0219,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-06-30,0.0247,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-07-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-08-31,0.0105,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-09-30,0.0220,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-10-31,0.0137,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-11-30,0.0053,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2025-12-31,0.0066,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2026-01-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2026-02-28,0.0087,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2026-03-31,-0.0222,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2026-04-30,0.0102,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2026-05-31,0.0182,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2026-06-30,-0.0157,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2026-07-31,0.0218,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
-F004,Pinnacle Multi-Strategy,Multi-strategy,2026-08-31,0.0043,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-03-31,0.0121,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-04-30,-0.0138,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-05-31,0.0148,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-06-30,-0.0230,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-07-31,0.0190,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-08-31,-0.0033,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-09-30,-0.0127,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-10-31,0.0356,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-11-30,0.0195,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-12-31,-0.0138,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-01-31,0.0275,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-02-28,0.0069,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-03-31,0.0203,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-04-30,0.0158,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-05-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-06-30,0.0247,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-07-31,0.0059,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-08-31,0.0140,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-09-30,-0.0115,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-10-31,-0.0011,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-11-30,0.0321,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-12-31,0.0181,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-01-31,0.0235,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-03-31,0.0057,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-04-30,-0.0105,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-05-31,0.0203,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-06-30,0.0116,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-07-31,0.0115,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-08-31,-0.0030,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-09-30,0.0073,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-10-31,0.0159,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-11-30,0.0152,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-12-31,0.0104,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-01-31,0.0127,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-02-28,0.0078,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-03-31,-0.0030,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-04-30,0.0035,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-05-31,0.0219,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-06-30,0.0247,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-07-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-08-31,0.0105,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-09-30,0.0220,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-10-31,0.0137,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-11-30,0.0053,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-12-31,0.0066,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-01-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-02-28,0.0087,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-03-31,-0.0222,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-04-30,0.0102,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-05-31,0.0182,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee. June-August 2026 returns not yet reported.
 F005,Summit Event Driven,Event-driven,2021-09,0.0039,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
 F005,Summit Event Driven,Event-driven,2021-10,0.0433,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
 F005,Summit Event Driven,Event-driven,2021-11,-0.0002,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
@@ -465,3 +462,11 @@ F009,Vector Digital Assets,Crypto,2026-05,0.1491,monthly,1,0,200,20%,Liquid toke
 F009,Vector Digital Assets,Crypto,2026-06,-0.1746,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
 F009,Vector Digital Assets,Crypto,2026-07,0.0779,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
 F009,Vector Digital Assets,Crypto,2026-08,0.0515,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F010,NorthStar Equity Partners,Equity L/S,2026-01,-0.0416,monthly,30,12,150,2000,Onshore feeder; the administrator reports it under its own identifier.
+F010,NorthStar Equity Partners,Equity L/S,2026-02,0.0178,monthly,30,12,150,2000,Onshore feeder; the administrator reports it under its own identifier.
+F010,NorthStar Equity Partners,Equity L/S,2026-03,-0.0075,monthly,30,12,150,2000,Onshore feeder; the administrator reports it under its own identifier.
+F010,NorthStar Equity Partners,Equity L/S,2026-04,0.0240,monthly,30,12,150,2000,Onshore feeder; the administrator reports it under its own identifier.
+F010,NorthStar Equity Partners,Equity L/S,2026-05,0.0106,monthly,30,12,150,2000,Onshore feeder; the administrator reports it under its own identifier.
+F010,NorthStar Equity Partners,Equity L/S,2026-06,-0.0264,monthly,30,12,150,2000,Onshore feeder; the administrator reports it under its own identifier.
+F010,NorthStar Equity Partners,Equity L/S,2026-07,0.0344,monthly,30,12,150,2000,Onshore feeder; the administrator reports it under its own identifier.
+F010,NorthStar Equity Partners,Equity L/S,2026-08,-0.0116,monthly,30,12,150,2000,Onshore feeder; the administrator reports it under its own identifier.

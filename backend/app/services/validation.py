@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -77,6 +78,8 @@ def validate_upload(
     observations = select_observations(parsed_rows)
     issues.extend(_missing_month_issues(observations))
     issues.extend(_smooth_return_issues(observations))
+    issues.extend(_fund_id_mismatch_issues(parsed_rows))
+    issues.extend(_date_range_issues(observations))
     issues.extend(_short_history_issues(observations))
     return issues
 
@@ -391,6 +394,131 @@ def _missing_month_issues(observations: list[ParsedRow]) -> list[ValidationIssue
                     f"{min(periods).isoformat()} and {max(periods).isoformat()}."
                 ),
                 details={"missing_months": [month.isoformat() for month in missing]},
+            )
+        )
+    return issues
+
+
+@dataclass(frozen=True)
+class CommonWindow:
+    """The universe's reference window: from the median fund start to the latest period."""
+
+    start: date
+    end: date
+    fund_count: int
+    funds_covering: int
+
+
+def common_window(periods_by_fund: Mapping[str, list[date]]) -> CommonWindow | None:
+    spans = [(min(periods), max(periods)) for periods in periods_by_fund.values() if periods]
+    if not spans:
+        return None
+    starts = sorted(start for start, _ in spans)
+    start = starts[(len(starts) - 1) // 2]
+    end = max(end for _, end in spans)
+    covering = sum(1 for first, last in spans if first <= start and last >= end)
+    return CommonWindow(start=start, end=end, fund_count=len(spans), funds_covering=covering)
+
+
+def _normalize_identifier(value: str) -> str:
+    return re.sub(r"[^0-9a-z]", "", value.casefold())
+
+
+def _fund_id_mismatch_issues(rows: list[ParsedRow]) -> list[ValidationIssue]:
+    """Warn when distinct fund_ids look like one fund: same normalized name, or ids that differ
+    only by case, whitespace, or punctuation."""
+    first_rows: dict[str, ParsedRow] = {}
+    for row in sorted(rows, key=lambda item: item.row_number):
+        if row.fund_id and row.fund_id not in first_rows:
+            first_rows[row.fund_id] = row
+
+    groups: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for fund_id, row in first_rows.items():
+        name_key = _normalize_identifier(row.values.get("fund_name", ""))
+        if name_key:
+            groups[("same_fund_name", name_key)].append(fund_id)
+        id_key = _normalize_identifier(fund_id)
+        if id_key:
+            groups[("similar_fund_id", id_key)].append(fund_id)
+
+    matches: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
+    for (reason, _), fund_ids in groups.items():
+        if len(fund_ids) < 2:
+            continue
+        for fund_id in fund_ids:
+            matches[fund_id][reason].update(other for other in fund_ids if other != fund_id)
+
+    issues: list[ValidationIssue] = []
+    for fund_id in sorted(matches):
+        reasons = matches[fund_id]
+        related = sorted(set().union(*reasons.values()))
+        described = {
+            "same_fund_name": "the same fund name",
+            "similar_fund_id": "a fund_id that differs only by case, spacing, or punctuation",
+        }
+        issues.append(
+            ValidationIssue(
+                code=IssueCode.FUND_ID_MISMATCH,
+                severity=IssueSeverity.WARNING,
+                fund_id=fund_id,
+                field="fund_id",
+                row_numbers=[first_rows[fund_id].row_number],
+                message=(
+                    f"{fund_id}: shares {' and '.join(described[r] for r in sorted(reasons))} "
+                    f"with {', '.join(related)}. Confirm these are different funds before "
+                    "comparing them."
+                ),
+                details={
+                    "related_fund_ids": related,
+                    "reasons": sorted(reasons),
+                    "fund_name": first_rows[fund_id].values.get("fund_name", ""),
+                },
+            )
+        )
+    return issues
+
+
+def _date_range_issues(observations: list[ParsedRow]) -> list[ValidationIssue]:
+    periods: dict[str, list[date]] = defaultdict(list)
+    rows: dict[str, list[int]] = defaultdict(list)
+    for row in observations:
+        assert row.fund_id is not None and row.period is not None
+        periods[row.fund_id].append(row.period)
+        rows[row.fund_id].append(row.row_number)
+    window = common_window(periods)
+    if window is None:
+        return []
+
+    issues: list[ValidationIssue] = []
+    for fund_id in sorted(periods):
+        first, last = min(periods[fund_id]), max(periods[fund_id])
+        reasons = []
+        if last < window.end:
+            reasons.append(f"ends {last.isoformat()}, before the universe's latest period")
+        if first > window.start:
+            reasons.append(f"starts {first.isoformat()}, after the common window start")
+        if not reasons:
+            continue
+        issues.append(
+            ValidationIssue(
+                code=IssueCode.INCONSISTENT_DATE_RANGE,
+                severity=IssueSeverity.WARNING,
+                fund_id=fund_id,
+                field="period",
+                row_numbers=sorted(rows[fund_id]),
+                message=(
+                    f"{fund_id}: {'; '.join(reasons)} ({window.start.isoformat()} to "
+                    f"{window.end.isoformat()}). Its metrics cover a different period than "
+                    "most of the universe."
+                ),
+                details={
+                    "first_period": first.isoformat(),
+                    "last_period": last.isoformat(),
+                    "common_window_start": window.start.isoformat(),
+                    "common_window_end": window.end.isoformat(),
+                    "ends_early": last < window.end,
+                    "starts_late": first > window.start,
+                },
             )
         )
     return issues

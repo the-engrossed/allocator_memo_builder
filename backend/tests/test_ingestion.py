@@ -184,26 +184,33 @@ def test_sample_universe_plants_expected_issues() -> None:
             by_code.setdefault(issue.code, set()).add(issue.fund_id)
     assert by_code == {
         IssueCode.CONFLICTING_METADATA: {"F001"},
+        IssueCode.FUND_ID_MISMATCH: {"F001", "F010"},
+        IssueCode.INCONSISTENT_DATE_RANGE: {"F002", "F004", "F008", "F009", "F010"},
         IssueCode.MISSING_MONTHS: {"F004", "F006", "F009"},
         IssueCode.INVALID_RETURN: {"F006"},
         IssueCode.SMOOTH_RETURNS: {"F007"},
-        IssueCode.SHORT_HISTORY: {"F008"},
+        IssueCode.SHORT_HISTORY: {"F008", "F010"},
         IssueCode.INVALID_PERIOD: {"F009"},
         IssueCode.RETURN_OUT_OF_RANGE: {"F009"},
         IssueCode.INVALID_METADATA: {"F009"},
     }
     metadata = next(i for i in issues if i.code is IssueCode.INVALID_METADATA)
     assert metadata.field == "perf_fee_bps"
+    ends_early = {
+        i.fund_id for i in issues
+        if i.code is IssueCode.INCONSISTENT_DATE_RANGE and i.details["ends_early"]
+    }
+    assert ends_early == {"F004"}
 
     counts: dict[str, int] = {}
     last_period: dict[str, object] = {}
     for row in observations:
         counts[row.fund_id] = counts.get(row.fund_id, 0) + 1
         last_period[row.fund_id] = max(last_period.get(row.fund_id, row.period), row.period)
-    assert len(counts) == 9
-    assert set(last_period.values()) == {date(2026, 8, 1)}
-    assert counts["F008"] == 11
-    assert all(36 <= count <= 60 for fund, count in counts.items() if fund != "F008")
+    assert len(counts) == 10
+    assert {fund for fund, last in last_period.items() if last != date(2026, 8, 1)} == {"F004"}
+    assert counts["F008"] == 11 and counts["F010"] == 8
+    assert all(36 <= count <= 60 for fund, count in counts.items() if fund not in {"F008", "F010"})
 
     blocked = {fund for fund in counts if is_analysis_blocked(fund, issues)}
     assert blocked == {"F009"}

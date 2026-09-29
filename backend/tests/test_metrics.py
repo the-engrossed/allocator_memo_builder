@@ -9,6 +9,7 @@ from app.services.metrics import (
     annualized_volatility,
     compute_fund_metrics,
     correlation,
+    excess_annualized_return,
     max_drawdown,
     risk_free_for_window,
     round_ratio,
@@ -71,6 +72,31 @@ def test_correlation_needs_twelve_overlapping_months() -> None:
     late = _series([0.02 * (i % 5) for i in range(14)], start="2023-04-01")
     value, overlap = correlation(fund, late)
     assert value is None and overlap == 11
+
+
+def test_excess_return_over_overlapping_months() -> None:
+    fund = _series([0.02] * 14, start="2023-01-01")
+    benchmark = _series([0.01] * 12, start="2023-03-01")
+    excess, overlap = excess_annualized_return(fund, benchmark)
+    assert overlap == 12
+    assert excess == pytest.approx((1.02**12 - 1) - (1.01**12 - 1))
+    assert to_bps(excess) == 1414
+
+    short, overlap = excess_annualized_return(fund, _series([0.01] * 11, start="2023-01-01"))
+    assert short is None and overlap == 11
+
+
+def test_excess_return_is_unverifiable_without_benchmark() -> None:
+    base = {
+        "benchmark": "SPY",
+        "risk_free_annual": 0.04,
+        "risk_free_source": "configured_fallback",
+        "target_return_bps": 1000,
+    }
+    fund = _series([0.02] * 12)
+    assert compute_fund_metrics(fund, benchmark_returns=None, **base).excess_return_bps is None
+    with_benchmark = compute_fund_metrics(fund, benchmark_returns=_series([0.01] * 12), **base)
+    assert with_benchmark.excess_return_bps == 1414
 
 
 def test_risk_free_uses_window_mean_else_fallback() -> None:

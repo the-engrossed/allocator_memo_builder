@@ -43,6 +43,15 @@ class FundSummaryOut(BaseModel):
     issue_counts: dict[str, int]
 
 
+class CommonWindowOut(BaseModel):
+    """Median fund start to the universe's latest period; see INCONSISTENT_DATE_RANGE."""
+
+    start: date
+    end: date
+    fund_count: int
+    funds_covering: int
+
+
 class AnalysisResponse(BaseModel):
     analysis_id: UUID
     filename: str
@@ -54,6 +63,7 @@ class AnalysisResponse(BaseModel):
     strategies: list[str]
     issues: list[ValidationIssueOut]
     funds: list[FundSummaryOut]
+    common_window: CommonWindowOut | None
 
 
 BasisPoints = Annotated[StrictInt, Field(ge=0, le=10_000)]

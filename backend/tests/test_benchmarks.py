@@ -2,19 +2,26 @@ import json
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+import httpx
 import pandas as pd
 import pytest
 
 from app.domain.enums import SeriesState
 from app.services import benchmarks
 from app.services.benchmarks import (
+    FRED_URL,
     benchmark_for_strategy,
+    failure_reason,
     month_end_closes,
     monthly_returns,
+    redact_secrets,
     resolve_benchmark,
     resolve_risk_free,
     write_snapshot,
 )
+
+# Captured at import, before the autouse offline fixture replaces it.
+REAL_FETCH_FRED = benchmarks.fetch_fred_monthly_rates
 
 TODAY = date(2026, 9, 28)
 NOW = datetime(2026, 9, 28, 12, 0, tzinfo=timezone.utc)
@@ -105,7 +112,7 @@ def test_stale_cache_is_used_when_live_fails(tmp_path: Path, monkeypatch: pytest
     )
     series = _resolve(tmp_path, now=NOW + timedelta(days=3))
     assert series.provenance.state is SeriesState.CACHED
-    assert "timed out" in series.provenance.message
+    assert series.provenance.message.startswith("Live fetch failed: timeout.")
     assert series.values.round(4).tolist() == [0.1, -0.1]
 
 
@@ -140,6 +147,48 @@ def test_risk_free_resolution(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     live = resolve_risk_free(api_key="key", **common)
     assert live.provenance.state is SeriesState.LIVE
     assert live.values.index.max() == pd.Timestamp("2026-08-01")
+
+
+def _leaky_fred_error(*_args: object, **_kwargs: object) -> None:
+    request = httpx.Request("GET", f"{FRED_URL}?series_id=DGS3MO&api_key=SECRET123&file_type=json")
+    response = httpx.Response(400, request=request)
+    raise httpx.HTTPStatusError(
+        f"Client error '400 Bad Request' for url '{request.url}'", request=request, response=response
+    )
+
+
+def test_fred_failure_never_exposes_the_api_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(benchmarks, "fetch_fred_monthly_rates", REAL_FETCH_FRED)
+    monkeypatch.setattr(benchmarks.httpx, "get", _leaky_fred_error)
+    resolved = resolve_risk_free(
+        today=TODAY, now=NOW, cache_dir=tmp_path, api_key="SECRET123",
+        fallback_annual=0.04, timeout=10.0,
+    )
+    assert resolved.provenance.state is SeriesState.FALLBACK
+    assert resolved.provenance.message.startswith("Live fetch failed: HTTP 400.")
+    assert "SECRET123" not in json.dumps(resolved.provenance.to_json())
+
+
+@pytest.mark.parametrize(
+    ("exc", "reason"),
+    [
+        (httpx.ReadTimeout("read timed out for https://x?api_key=SECRET123"), "timeout"),
+        (TimeoutError("slow"), "timeout"),
+        (ValueError("bad json from https://x?api_key=SECRET123"), "ValueError"),
+        (benchmarks.MarketDataError("no rows"), "no rows"),
+    ],
+)
+def test_failure_reason_is_url_free(exc: BaseException, reason: str) -> None:
+    assert failure_reason(exc) == reason
+
+
+def test_redact_secrets() -> None:
+    text = "GET https://h/p?series_id=X&api_key=SECRET123&token=abc Api_Key=zzz"
+    redacted = redact_secrets(text)
+    assert "SECRET123" not in redacted and "abc" not in redacted and "zzz" not in redacted
+    assert "api_key=REDACTED" in redacted and "series_id=X" in redacted
 
 
 @pytest.mark.parametrize(
