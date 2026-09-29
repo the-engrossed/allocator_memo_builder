@@ -71,13 +71,26 @@ Each memo claim must contain:
 
 A quantitative claim must include at least one valid evidence ID.
 
-The claim guard must reject or visibly flag:
-- Unknown evidence IDs.
+The claim guard (`app/services/claim_guard.py`) must visibly flag:
+- Unknown evidence IDs (in markers or `evidence_ids`).
+- A `[[marker]]` missing from `evidence_ids`, or an `evidence_ids` entry not used as a marker.
 - Quantitative claims without evidence.
-- Fund-specific claims that cite evidence from another fund.
-- Recommendations for funds that did not pass deterministic screening.
+- Digits outside `[[markers]]` (fund IDs, fund names, strategies from the run, and month-year
+  labels such as "May 2026" are allowed).
+- Fund-specific claims that cite another fund's evidence (BMK/RUN evidence is allowed for any
+  fund).
+- Claims with a null `fund_id` that cite a fund's evidence without naming that fund (by fund
+  ID or name) in the prose outside markers ("cited fund not named").
+- Recommendation claims about a fund that is not shortlisted.
+- Quantitative claims that rely on unverifiable, invalid, or missing evidence.
 
-Never silently remove an invalid claim, citation, or audit warning.
+Memo-level issues: `shortlist_rationale` must cover each shortlisted fund once, in rank order;
+if the top-ranked fund has data-quality evidence, a recommendation claim for it must cite that
+DQ evidence and its verified `SRC-…-NOTES`. `guard_summary.status` is `flagged` when any claim
+or memo-level issue is flagged, otherwise `clean`.
+
+Never silently remove an invalid claim, citation, or audit warning. Flagged claims are stored
+and returned verbatim.
 
 ### 4. Evidence is first-class data
 
@@ -86,12 +99,18 @@ exclusion reason must become an evidence record.
 
 Each evidence record requires:
 - `evidence_id`
-- `evidence_type`: `metric`, `source_field`, `data_quality`, or `screen_result`
+- `type`: `metric`, `source_field`, `data_quality`, `screen_result`, `selection`,
+  `benchmark`, or `run_warning`
 - `fund_id` nullable
 - `label`
-- `display_value`
-- `verification_status`: `verified` or `warning`
+- `display_value` (pre-formatted by Python)
+- `verification_status`: `verified`, `unverifiable`, `invalid`, or `missing`
 - `provenance`
+
+The registry (`app/services/evidence_registry.py`) is built from one persisted ranking run
+only. MET/SRC/DQ/SCR records reuse the IDs the run issued; `SEL-{fund}-{REASON}`,
+`BMK-SPY|AGG|RF`, and `RUN-{WARNING}` are derived one-to-one from the run. Metrics that were
+not computed get no record. Each memo stores an `evidence_snapshot` of the registry it cited.
 
 `provenance` must identify either:
 - Source CSV field/row information, or
@@ -108,6 +127,9 @@ SRC-F003-NOTES
 DQ-F003-SHORT-HISTORY-PERIOD
 DQ-F001-CONFLICTING-METADATA
 SCR-F003-LIQUIDITY-FAIL
+SEL-F006-CAPACITY-REACHED
+BMK-SPY
+RUN-CONCENTRATION-FLOOR-APPLIED
 ```
 
 Data-quality IDs are `DQ-{fund}-{CODE}-{FIELD}` when the issue has a field, otherwise

@@ -41,6 +41,40 @@ def offline_market_data(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None
     monkeypatch.setattr(settings, "rf_fallback_annual", 0.04)
 
 
+@pytest.fixture(autouse=True)
+def offline_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test may reach OpenAI: no key, and constructing a client fails loudly."""
+    from app.config import settings
+    from app.services import memo_generator
+
+    def _no_client() -> None:
+        raise AssertionError("Tests must not construct a real OpenAI client.")
+
+    monkeypatch.setattr(settings, "openai_api_key", "")
+    monkeypatch.setattr(memo_generator, "make_openai_client", _no_client)
+
+
+@pytest.fixture
+def live_benchmarks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Synthetic month-end closes standing in for Yahoo Finance; no real market data in tests."""
+    import numpy as np
+    import pandas as pd
+
+    from app.seed.sample_data import MARKET
+    from app.services import benchmarks
+
+    month_ends = pd.date_range("2021-08-31", periods=len(MARKET) + 1, freq="ME")
+    spy = pd.Series(100 * np.cumprod([1.0, *(1 + r for r in MARKET)]), index=month_ends)
+    agg_returns = [0.002 + 0.1 * r for r in MARKET]
+    agg = pd.Series(100 * np.cumprod([1.0, *(1 + r for r in agg_returns)]), index=month_ends)
+    partial = pd.Timestamp("2026-09-15")
+    closes = {
+        "SPY": pd.concat([spy, pd.Series([999.0], index=[partial])]),
+        "AGG": pd.concat([agg, pd.Series([999.0], index=[partial])]),
+    }
+    monkeypatch.setattr(benchmarks, "fetch_yahoo_daily_closes", lambda ticker, timeout: closes[ticker])
+
+
 @pytest.fixture(scope="session")
 def pg_engine() -> Iterator[Engine]:
     if not _TEST_DATABASE_URL:

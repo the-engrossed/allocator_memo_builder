@@ -3,11 +3,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
-import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-from app.seed.sample_data import FUNDS, MARKET, fund_returns
+from app.seed.sample_data import FUNDS, fund_returns
 from app.services import benchmarks
 from app.services.ranking_runs import _data_quality
 
@@ -31,21 +30,6 @@ DEFAULT_MANDATE = {
 ELIGIBLE = {"F001", "F002", "F003", "F004", "F006", "F007"}
 EXCLUDED = {"F005", "F008", "F009", "F010"}
 SELECTED = {"SELECTED_PREFERENCE_PASS", "SELECTED_RANK_PASS"}
-
-
-@pytest.fixture
-def live_benchmarks(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Synthetic month-end closes standing in for Yahoo Finance; no real market data in tests."""
-    month_ends = pd.date_range("2021-08-31", periods=len(MARKET) + 1, freq="ME")
-    spy = pd.Series(100 * np.cumprod([1.0, *(1 + r for r in MARKET)]), index=month_ends)
-    agg_returns = [0.002 + 0.1 * r for r in MARKET]
-    agg = pd.Series(100 * np.cumprod([1.0, *(1 + r for r in agg_returns)]), index=month_ends)
-    partial = pd.Timestamp("2026-09-15")
-    closes = {
-        "SPY": pd.concat([spy, pd.Series([999.0], index=[partial])]),
-        "AGG": pd.concat([agg, pd.Series([999.0], index=[partial])]),
-    }
-    monkeypatch.setattr(benchmarks, "fetch_yahoo_daily_closes", lambda ticker, timeout: closes[ticker])
 
 
 def _sample_analysis(client: TestClient, **mandate_overrides: object) -> str:

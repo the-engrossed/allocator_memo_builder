@@ -99,6 +99,21 @@ None of these block a fund, merge funds, or affect screening.
 
 **Resolution:** Metrics compound across gaps using observed months only and never fill a missing month. `tests/test_ranking_runs.py::test_sample_universe_end_to_end` uploads the sample and runs the full pipeline. For every fund that gets metrics (F001 through F008), it asserts that the app's max drawdown and annualized volatility match the generator within 5 bps. The generator's figures are computed on the rows the CSV actually emits. The test also asserts that F003 and F006 pass a 20% drawdown cap.
 
+## Memo generation: markers only, guarded, with an immutable evidence snapshot
+
+**Choice:**
+- **One structured-output call.** The memo is drafted by a single OpenAI `responses.parse` call into `MemoDraft`, with a 120 s timeout and `max_output_tokens` of 12000. Only a connection error is retried, and only once; timeouts, HTTP errors, refusals, output-limit stops, and parse failures are not retried. The number of calls made is stored on the memo as `llm_attempts`.
+- **Template fallback.** If the key is missing, or the call times out, errors, is refused, fails schema parsing, or stops at the output limit, a deterministic template memo with the same structure is used instead. The fallback reason is short and sanitized, for example `HTTP 400`, `timeout`, or `max_output_tokens`.
+- **Figures only as markers.** Every figure, count, rank, and benchmark appears only as an `[[EVIDENCE-ID]]` marker, and that includes spelled-out numbers. Vague quantifiers are allowed.
+- **Untrusted fund text.** Fund names, strategies, and notes are passed only inside an `<untrusted_fund_data>` block, and the model is told to treat them as data.
+- **Guard on every claim.** The claim guard runs on every claim, whether it came from the LLM or the template. Flagged claims are stored verbatim, never removed or rewritten.
+- **Top-fund data quality.** If the top-ranked fund has data-quality evidence, the recommendation must address it, citing its DQ and notes evidence.
+- **Deterministic appendix and snapshot.** The data appendix is built from the run, not by the LLM. Each memo revision stores the evidence registry it was checked against.
+
+**Why:** A committee reader must be able to trace every figure to one computed record, and a model that writes numbers can't be verified. The snapshot keeps an old memo's citations resolvable exactly as they were, even if registry formatting code changes later. The template keeps the demo usable, and honest about which mode produced it, when the model isn't available.
+
+**Consequence:** Memo prose is constrained, and some sentences read like a catalogue of markers. Spelled-out numbers are banned by instruction but aren't checked by the guard in this version.
+
 ## Ranking policy v1 calculation choices
 
 **Choice:**

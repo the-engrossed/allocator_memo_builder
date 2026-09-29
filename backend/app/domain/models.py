@@ -196,3 +196,39 @@ class FundEvaluation(Base):
     evidence_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
 
     run: Mapped[RankingRun] = relationship(back_populates="evaluations")
+
+
+class MemoArtifact(Base):
+    """One immutable memo revision for a ranking run. Each POST adds a revision."""
+
+    __tablename__ = "memo_artifacts"
+    __table_args__ = (
+        UniqueConstraint("ranking_run_id", "revision", name="uq_memo_artifacts_run_revision"),
+        CheckConstraint(
+            "generation_mode IN ('llm', 'template')", name="ck_memo_artifacts_generation_mode"
+        ),
+        CheckConstraint(
+            "llm_attempts IS NULL OR llm_attempts BETWEEN 0 AND 2",
+            name="ck_memo_artifacts_llm_attempts",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    ranking_run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ranking_runs.id", ondelete="CASCADE"), nullable=False
+    )
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    generation_mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prompt_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    fallback_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    llm_attempts: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    claims: Mapped[list] = mapped_column(JSONB, nullable=False)
+    guard_results: Mapped[list] = mapped_column(JSONB, nullable=False)
+    guard_summary: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    appendix: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    evidence_snapshot: Mapped[list] = mapped_column(JSONB, nullable=False)
+    token_usage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    ranking_run: Mapped[RankingRun] = relationship()

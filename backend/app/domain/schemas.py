@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import (
@@ -173,6 +173,91 @@ class RankingRunResponse(BaseModel):
     warnings: list[RunWarningOut]
     summary: RankingRunSummary
     funds: list[FundEvaluationOut]
+
+
+ClaimType = Literal["quantitative", "qualitative", "judgment"]
+
+
+class DraftClaim(BaseModel):
+    """One memo claim. Figures appear only as [[EVIDENCE-ID]] markers inside text."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str
+    evidence_ids: list[str]
+    claim_type: ClaimType
+    fund_id: str | None
+
+
+class FundRationale(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fund_id: str
+    claims: list[DraftClaim]
+
+
+class MemoDraft(BaseModel):
+    """The only shape the LLM (or the template) may return."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    executive_summary: list[DraftClaim]
+    recommendation: list[DraftClaim]
+    shortlist_rationale: list[FundRationale]
+    key_risks: list[DraftClaim]
+
+
+class EvidenceRecordOut(BaseModel):
+    evidence_id: str
+    type: str
+    fund_id: str | None
+    label: str
+    display_value: str
+    verification_status: Literal["verified", "unverifiable", "invalid", "missing"]
+    provenance: dict
+
+
+class EvidenceRegistryResponse(BaseModel):
+    ranking_run_id: UUID
+    records: list[EvidenceRecordOut]
+
+
+class GuardReasonOut(BaseModel):
+    code: str
+    message: str
+
+
+class MemoClaimOut(BaseModel):
+    claim_id: str
+    section: str
+    position: int
+    rationale_fund_id: str | None
+    text: str
+    evidence_ids: list[str]
+    claim_type: ClaimType
+    fund_id: str | None
+    guard_status: Literal["ok", "flagged"]
+    guard_reasons: list[GuardReasonOut]
+
+
+class MemoResponse(BaseModel):
+    memo_id: UUID
+    ranking_run_id: UUID
+    analysis_id: UUID
+    revision: int
+    generation_mode: Literal["llm", "template"]
+    model: str | None
+    prompt_version: str
+    fallback_reason: str | None
+    llm_attempts: int | None = Field(
+        description="OpenAI calls made (0 when no key; null for memos created before 0006)"
+    )
+    created_at: datetime
+    claims: list[MemoClaimOut]
+    guard_summary: dict
+    appendix: dict
+    evidence_snapshot: list[EvidenceRecordOut]
+    token_usage: dict | None
 
 
 class HealthResponse(BaseModel):

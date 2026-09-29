@@ -13,7 +13,9 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://allocator:allocator@postgres:5432/allocator"
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-6-sol"
+    openai_timeout_seconds: float = 120.0
+    openai_max_output_tokens: int = 12_000
     fred_api_key: str = ""
     rf_fallback_annual: float = 0.04
     max_upload_bytes: int = 5 * 1024 * 1024
