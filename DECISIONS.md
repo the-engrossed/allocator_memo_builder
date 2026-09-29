@@ -140,8 +140,47 @@ None of these block a fund, merge funds, or affect screening.
 
 ## The LLM proposes a ranked shortlist within deterministic limits (memo-v3 to memo-v6)
 
-**Choice:** Screens, eligibility, scores, and the baseline shortlist stay deterministic. The memo draft adds `llm_ranking` (an ordered list of eligible funds, each with a rationale claim) and `llm_dropped` (baseline-shortlisted funds left out, each with a rationale claim). The LLM may reorder the baseline, add an eligible fund, or drop a shortlisted one. Deterministic memo-level rules flag a ranked fund that isn't eligible, a fund listed twice, more funds than `max_candidates`, more funds per strategy than the concentration limit, an invalid drop entry, and any fund whose position differs from its baseline shortlist position without citing its own reorder evidence (`LLM_RANK_MOVE_UNCITED`). `LLM_RANK_REWEIGHTS_SCORE` flags a fund A placed above a fund B that ranks above it in the baseline, unless B cites its own DQ or SRC or A cites its own SRC terms or notes. Reorder evidence is only a warning- or error-level DQ, verified SRC terms or notes, or a failing or unverifiable SCR; no MET counts. The prompt (`memo-v6`) says: reorder only on data-quality flags or fund terms and notes, never on metrics, which the score already weighs. Recommendations must name funds in the LLM ranking. Each memo stores the ranking with baseline rank, LLM rank, and delta per fund; the template memo stores the baseline order with source `baseline`.
+**Choice:** Screens, eligibility, scores, and the baseline shortlist stay deterministic. The LLM proposes an order on top of them.
 
-**Why:** The brief asks for an LLM-produced ranked shortlist. Letting the model reorder only inside the eligible set, under the mandate's capacity and concentration limits, keeps every hard constraint deterministic while letting it act on evidence the score ignores, such as F007's smooth returns and manager notes. Requiring a citation for every move makes each change traceable. In `memo-v3`, the model promoted F003 from fourth to first on correlation, return, and drawdown alone, which re-weighs the formula rather than adding information; `memo-v4` closes that. In `memo-v4` revision 6, the model then promoted F003 to first citing only its notice and lockup screen passes. Every eligible fund passes every screen, so a pass separates nothing: `SCR-*-PASS` records of eligible funds no longer count as evidence for `LLM_RANK_MOVE_UNCITED` or `LLM_RANK_REWEIGHTS_SCORE`. Re-running the guard read-only on revision 6 now flags `LLM_RANK_MOVE_UNCITED` for F003; the stored memo and its clean guard result are kept unchanged. Two further gaps were found in external review and closed in `memo-v6`. C1: the `memo-v4` rule still accepted score-derived metrics such as target gap, excess return, volatility, and months as reasons to reorder; now no MET counts. C2: the pair rule accepted either fund's evidence in either direction, so a fund's own data-quality flag could justify promoting it; the rule is now directional, and a promoted fund can only rest on its own terms or notes. Re-run read-only under the `memo-v6` rules, revisions 5 and 6 are flagged `LLM_RANK_MOVE_UNCITED` for F003 (metrics only and screen passes only), and revision 7 stays clean.
+- **What the LLM returns:**
+  - `llm_ranking`: an ordered list of eligible funds, each with a rationale claim.
+  - `llm_dropped`: baseline-shortlisted funds it left out, each with a rationale claim.
+- **What it may do:** reorder the baseline, add an eligible fund, or drop a shortlisted one.
+- **Reorder evidence:** a move must cite the fund's own
+  - data-quality flag at warning or error level (DQ);
+  - verified terms (liquidity, notice, lockup, fees) or manager notes (SRC);
+  - or a failing or unverifiable screen (SCR).
 
-**Consequence:** The guard checks that a move cites the right kind of evidence, not that the evidence justifies the move; the baseline rank shown next to every fund is the reader's check. Memos before `memo-v3` have no stored ranking and keep checking recommendations against the baseline shortlist. AGENTS.md section 1 is amended to match.
+  No metric (MET) counts, and neither do screen passes.
+- **Guard rules (deterministic, memo-level):**
+
+  | Rule | Flags |
+  |---|---|
+  | `LLM_RANK_INELIGIBLE_FUND` | A ranked fund that isn't eligible |
+  | `LLM_RANK_DUPLICATE` | A fund listed twice |
+  | `LLM_RANK_OVER_CAPACITY` | More funds than `max_candidates` |
+  | `LLM_RANK_CONCENTRATION` | More funds per strategy than the concentration limit |
+  | `LLM_RANK_INVALID_DROP` | A dropped fund that wasn't on the baseline shortlist, or is also ranked |
+  | `LLM_RANK_MOVE_UNCITED` | A fund off its baseline position without its own reorder evidence |
+  | `LLM_RANK_REWEIGHTS_SCORE` | Fund A placed above fund B that ranks above it in the baseline, unless B cites its own DQ or SRC, or A cites its own terms or notes |
+
+- **Recommendations** must name funds in the LLM ranking.
+- **Stored on each memo:** baseline rank, LLM rank, and delta per fund. The template memo stores the baseline order with source `baseline`.
+
+**Why:** The brief asks for an LLM-produced ranked shortlist. Keeping the model inside the eligible set and the mandate's limits keeps every hard constraint deterministic, while letting it act on evidence the score ignores, such as F007's smooth returns and manager notes. A citation on every move makes each change traceable.
+
+The rules were tightened three times, each time after a real failure:
+
+| Prompt | What went wrong | Fix |
+|---|---|---|
+| `memo-v3` | The model promoted F003 from fourth to first on correlation, return, and drawdown, which re-weighs the formula instead of adding information | `memo-v4`: added `LLM_RANK_REWEIGHTS_SCORE` |
+| `memo-v4` | Revision 6 promoted F003 to first citing only its notice and lockup screen passes. Every eligible fund passes every screen, so a pass separates nothing | `memo-v5`: screen passes of eligible funds no longer count |
+| `memo-v5` | External review found two gaps. First, score-derived metrics (target gap, excess return, volatility, months) still counted as reorder evidence. Second, the pair rule accepted either fund's evidence in either direction, so a fund's own data-quality flag could promote it | `memo-v6`: no metric counts. The pair rule is directional: a fund's own flag can move it down, never up |
+
+Stored memos are never rewritten. Re-run read-only under the `memo-v6` rules, revisions 5 and 6 are flagged `LLM_RANK_MOVE_UNCITED` for F003, and revision 7 stays clean.
+
+**Consequence:** The guard checks the kind and direction of evidence, not whether it justifies the move. The baseline rank shown next to every fund is the reader's check.
+
+- **Known gap:** citing a term such as a fee doesn't check that the promoted fund's term is actually better than the other fund's. Terms are ordinal, so the next step is to require it. Notes are free text and remain a judgment call.
+- **Older memos:** memos before `memo-v3` have no stored ranking and keep checking recommendations against the baseline shortlist.
+- **Spec:** AGENTS.md section 1 is amended to match.
