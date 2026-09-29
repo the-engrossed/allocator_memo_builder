@@ -16,10 +16,11 @@ MONTH_YEAR = re.compile(
 )
 UNVERIFIED_STATUSES = {"unverifiable", "invalid", "missing"}
 FUND_NEUTRAL_TYPES = {"benchmark", "run_warning"}
-# Evidence that can justify moving a fund away from its baseline position; SEL only restates it.
-MOVE_EVIDENCE_TYPES = {"data_quality", "source_field", "screen_result", "metric"}
-# Metrics the deterministic score already weighs; citing them cannot justify inverting two funds.
-SCORE_INPUT_METRIC = re.compile(r"^MET-.+-(SHARPE|ANNUALIZED-RETURN|MAX-DRAWDOWN|CORRELATION-[A-Z]+)$")
+# Fund terms and notes: the source fields a reorder may rest on. Every MET is score-derived, SEL
+# restates the baseline, and every eligible fund passes every screen, so none of those count.
+REORDER_SOURCE_FIELDS = {
+    "liquidity_frequency", "notice_days", "lockup_months", "mgmt_fee_bps", "perf_fee_bps", "notes",
+}
 
 
 @dataclass(frozen=True)
@@ -335,52 +336,57 @@ def llm_ranking_issues(
     uncited = [
         fund_id
         for fund_id in moved
-        if not _cites_move_evidence(
+        if not _reorder_evidence(
             claims, context, fund_id, "llm_ranking" if fund_id in positions else "llm_dropped"
         )
     ]
     if uncited:
         issue(
             "LLM_RANK_MOVE_UNCITED",
-            "A fund whose position differs from the deterministic baseline must cite its own DQ, "
-            "SRC, SCR, or MET evidence (screen passes of eligible funds don't count): "
-            + ", ".join(uncited) + ".",
+            "A fund whose position differs from the deterministic baseline must cite its own "
+            "warning- or error-level DQ, SRC terms or notes, or a failing or unverifiable SCR "
+            "(metrics never count): " + ", ".join(uncited) + ".",
         )
 
     ranks = limits.baseline_ranks
     ordered = [f for f in positions if f in ranks]
+    kinds = {fund_id: _reorder_evidence(claims, context, fund_id, "llm_ranking") for fund_id in ordered}
     reweighted = [
         f"{above} above {below}"
         for i, above in enumerate(ordered)
         for below in ordered[i + 1:]
         if ranks[above] > ranks[below]
-        and not _cites_move_evidence(claims, context, above, "llm_ranking", non_score_only=True)
-        and not _cites_move_evidence(claims, context, below, "llm_ranking", non_score_only=True)
+        and not (kinds[below] & {"dq", "src"})
+        and "src" not in kinds[above]
     ]
     if reweighted:
         issue(
             "LLM_RANK_REWEIGHTS_SCORE",
-            "Funds ordered against the deterministic baseline must rest on evidence the score does "
-            "not already weigh (DQ, SRC, a failing or unverifiable SCR, or a MET other than Sharpe, "
-            "return, drawdown, or correlation) from at least one of the pair: "
+            "A fund placed above a better-ranked baseline fund needs the demoted fund's own DQ or "
+            "SRC, or the promoted fund's own SRC terms or notes; a fund's own DQ never promotes it: "
             + ", ".join(reweighted) + ".",
         )
     return issues
 
 
-def _cites_move_evidence(
-    claims: list[dict], context: GuardContext, fund_id: str, section: str, *, non_score_only: bool = False
-) -> bool:
-    limits = context.ranking_limits
-    eligible = limits is not None and fund_id in limits.eligible_strategies
-    return any(
-        (record := context.registry.get(evidence_id)) is not None
-        and record.fund_id == fund_id
-        and record.type in MOVE_EVIDENCE_TYPES
-        and not (non_score_only and SCORE_INPUT_METRIC.match(evidence_id))
-        # Every eligible fund passes every screen, so a pass says nothing that separates funds.
-        and not (eligible and record.type == "screen_result" and record.provenance.get("result") == "pass")
-        for claim in claims
-        if claim["section"] == section and claim.get("rationale_fund_id") == fund_id
-        for evidence_id in claim["evidence_ids"]
-    )
+def _reorder_evidence(claims: list[dict], context: GuardContext, fund_id: str, section: str) -> set[str]:
+    """Kinds of reorder evidence the fund's own rationale cites: "dq", "src", or "scr"."""
+    kinds: set[str] = set()
+    for claim in claims:
+        if claim["section"] != section or claim.get("rationale_fund_id") != fund_id:
+            continue
+        for evidence_id in claim["evidence_ids"]:
+            record = context.registry.get(evidence_id)
+            if record is None or record.fund_id != fund_id:
+                continue
+            if record.type == "data_quality" and record.provenance.get("severity") in ("warning", "error"):
+                kinds.add("dq")
+            elif (
+                record.type == "source_field"
+                and record.provenance.get("field") in REORDER_SOURCE_FIELDS
+                and record.verification_status == "verified"
+            ):
+                kinds.add("src")
+            elif record.type == "screen_result" and record.provenance.get("result") in ("fail", "unverifiable"):
+                kinds.add("scr")
+    return kinds

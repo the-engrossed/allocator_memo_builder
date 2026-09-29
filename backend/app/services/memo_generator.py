@@ -23,7 +23,7 @@ from app.services.evidence_registry import (
 )
 from app.services.ranking import strategy_limit
 
-PROMPT_VERSION = "memo-v5"
+PROMPT_VERSION = "memo-v6"
 MAX_CONNECTION_ATTEMPTS = 2
 SELECTED = ("SELECTED_PREFERENCE_PASS", "SELECTED_RANK_PASS")
 
@@ -64,14 +64,13 @@ Ranked shortlist
 - llm_dropped: every baseline-shortlisted fund you left out of llm_ranking, and no other fund.
 - Each entry has one rationale claim whose fund_id is that entry's fund_id. If a fund's position
   in llm_ranking differs from its baseline_shortlist_position (including added and dropped funds),
-  its rationale must cite that fund's own DQ-*, SRC-*, SCR-*, or MET-* evidence for the change.
-  SEL-* evidence alone does not justify a move. Passing a screen is not a reason to move a fund;
-  every eligible fund passes every screen.
-- Reorder only on information the deterministic score does not already weigh (data quality,
-  manager notes, terms, screens); never re-weigh Sharpe, return, drawdown, or correlation. When you
-  place a fund above one with a better baseline_rank, at least one of the two rationales must cite
-  such evidence (DQ-*, SRC-*, SCR-*, or a MET-* other than Sharpe, annualized return, maximum
-  drawdown, or correlation).
+  its rationale must cite that fund's own data-quality flags (DQ-*) or its own terms or manager
+  notes (SRC-*) for the change. SEL-* evidence does not justify a move. Passing a screen is not a
+  reason to move a fund; every eligible fund passes every screen.
+- Reorder only on data-quality flags or fund terms and notes; never on metrics, which the score
+  already weighs. When you place a fund above one with a better baseline_rank, either the fund you
+  demote must cite its own DQ-* or SRC-* evidence, or the fund you promote must cite its own
+  terms or notes (SRC-*). A fund's own data-quality flags never justify promoting it.
 
 Sections
 - executive_summary: the ranked shortlist outcome, key drivers, and the most important caveats.

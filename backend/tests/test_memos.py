@@ -249,7 +249,7 @@ def test_missing_key_uses_a_clean_template_memo(client: TestClient, live_benchma
     assert memo["generation_mode"] == "template"
     assert memo["fallback_reason"] == "OPENAI_API_KEY is not set"
     assert memo["model"] is None and memo["token_usage"] is None
-    assert memo["revision"] == 1 and memo["prompt_version"] == "memo-v5"
+    assert memo["revision"] == 1 and memo["prompt_version"] == "memo-v6"
     assert memo["guard_summary"]["status"] == "clean", memo["guard_summary"]
     assert memo["guard_summary"]["flagged"] == 0
 

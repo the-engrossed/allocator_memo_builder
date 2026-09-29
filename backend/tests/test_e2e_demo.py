@@ -74,8 +74,8 @@ def test_demo_flow_end_to_end(
     assert funds["F006"]["selection_reason"] == "CAPACITY_REACHED"
 
     demoted = [
-        _ranked("F004", "MET-F004-SHARPE"),
-        _ranked("F001", "MET-F001-SHARPE"),
+        _ranked("F004", "SRC-F004-LOCKUP-MONTHS"),
+        _ranked("F001", "SRC-F001-LOCKUP-MONTHS"),
         _ranked("F007", SMOOTH_DQ, NOTES_SRC),
         _ranked("F003", _sel(run, "F003")),
         _ranked("F002", _sel(run, "F002")),

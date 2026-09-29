@@ -30,7 +30,8 @@ def _kept(run: dict, fund_id: str) -> RankedFund:
 
 
 def _moved(fund_id: str) -> RankedFund:
-    return _ranked(fund_id, f"MET-{fund_id}-SHARPE")
+    """A move justified by the fund's own terms (an SRC record), which the score doesn't weigh."""
+    return _ranked(fund_id, f"SRC-{fund_id}-LOCKUP-MONTHS")
 
 
 @pytest.fixture
@@ -100,13 +101,7 @@ def test_strategy_concentration_is_flagged(
 
 
 def test_uncited_move_is_flagged(client: TestClient, monkeypatch: pytest.MonkeyPatch, run: dict) -> None:
-    ranking = [
-        _ranked("F004", "DQ-F004-MISSING-MONTHS-PERIOD"),
-        _ranked("F001", "DQ-F001-CONFLICTING-METADATA"),
-        _kept(run, "F007"),
-        _kept(run, "F003"),
-        _kept(run, "F002"),
-    ]
+    ranking = [_moved("F004"), _moved("F001"), _kept(run, "F007"), _kept(run, "F003"), _kept(run, "F002")]
     memo = _post(client, monkeypatch, run, _mock_llm_draft(run, ranking))
     assert _codes(memo) == {"LLM_RANK_MOVE_UNCITED"}
     assert memo["guard_summary"]["memo_issues"][0]["message"].endswith(": F007.")
@@ -121,8 +116,9 @@ def test_pure_metric_swap_of_clean_funds_is_flagged(
         _ranked("F003", "MET-F003-ANNUALIZED-RETURN", "MET-F003-CORRELATION-SPY"),
     ]
     memo = _post(client, monkeypatch, run, _mock_llm_draft(run, ranking))
-    assert _codes(memo) == {"LLM_RANK_REWEIGHTS_SCORE"}
-    assert memo["guard_summary"]["memo_issues"][0]["message"].endswith(": F002 above F003.")
+    assert _codes(memo) == {"LLM_RANK_MOVE_UNCITED", "LLM_RANK_REWEIGHTS_SCORE"}
+    issues = {i["code"]: i["message"] for i in memo["guard_summary"]["memo_issues"]}
+    assert issues["LLM_RANK_REWEIGHTS_SCORE"].endswith(": F002 above F003.")
 
 
 def test_promotion_citing_only_screen_passes_is_flagged(
@@ -140,20 +136,24 @@ def test_promotion_citing_only_screen_passes_is_flagged(
     assert "F003 above F007" in issues["LLM_RANK_REWEIGHTS_SCORE"]
 
 
-def test_non_score_metric_justifies_a_swap(
+def test_target_gap_does_not_justify_a_swap(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, run: dict
 ) -> None:
     ranking = [
         *(_kept(run, f) for f in ("F007", "F004", "F001")),
         _ranked("F002", "MET-F002-SHARPE", "MET-F002-TARGET-GAP"),
-        _moved("F003"),
+        _ranked("F003", "MET-F003-EXCESS-VS-SPY", "MET-F003-VOLATILITY"),
     ]
     memo = _post(client, monkeypatch, run, _mock_llm_draft(run, ranking))
-    assert _codes(memo) == set(), memo["guard_summary"]
+    assert _codes(memo) == {"LLM_RANK_MOVE_UNCITED", "LLM_RANK_REWEIGHTS_SCORE"}
+    issues = {i["code"]: i["message"] for i in memo["guard_summary"]["memo_issues"]}
+    assert issues["LLM_RANK_MOVE_UNCITED"].endswith(": F002, F003.")
+    assert issues["LLM_RANK_REWEIGHTS_SCORE"].endswith(": F002 above F003.")
 
 
-def test_revision_five_shape_passes(client: TestClient, monkeypatch: pytest.MonkeyPatch, run: dict) -> None:
-    """F003 promoted on metrics alone is allowed because every fund it passes cites DQ evidence."""
+def test_revision_five_shape_is_flagged_for_a_metric_only_promotion(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, run: dict
+) -> None:
     ranking = [
         _ranked("F003", "MET-F003-CORRELATION-SPY", "MET-F003-ANNUALIZED-RETURN", "MET-F003-MAX-DRAWDOWN"),
         _ranked("F001", "MET-F001-ANNUALIZED-RETURN", "DQ-F001-CONFLICTING-METADATA"),
@@ -162,7 +162,48 @@ def test_revision_five_shape_passes(client: TestClient, monkeypatch: pytest.Monk
         _ranked("F007", SMOOTH_DQ, NOTES_SRC),
     ]
     memo = _post(client, monkeypatch, run, _mock_llm_draft(run, ranking))
+    assert _codes(memo) == {"LLM_RANK_MOVE_UNCITED"}
+    assert memo["guard_summary"]["memo_issues"][0]["message"].endswith(": F003.")
+
+
+def test_promoted_fund_citing_only_its_own_dq_is_flagged(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, run: dict
+) -> None:
+    ranking = [
+        _ranked("F001", "DQ-F001-CONFLICTING-METADATA"),
+        _kept(run, "F004"),
+        _ranked("F003", "SRC-F003-NOTES"),
+        _ranked("F002", "SRC-F002-NOTES"),
+    ]
+    dropped = [_ranked("F007", SMOOTH_DQ, NOTES_SRC)]
+    memo = _post(client, monkeypatch, run, _mock_llm_draft(run, ranking, dropped, recommend_top=False))
+    assert _codes(memo) == {"LLM_RANK_REWEIGHTS_SCORE"}
+    assert memo["guard_summary"]["memo_issues"][0]["message"].endswith(": F001 above F004.")
+
+
+def test_demoted_fund_citing_its_own_dq_passes(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, run: dict
+) -> None:
+    ranking = [
+        _kept(run, "F007"),
+        _ranked("F001", "DQ-F001-CONFLICTING-METADATA"),
+        _ranked("F004", "DQ-F004-MISSING-MONTHS-PERIOD"),
+        _kept(run, "F003"),
+        _kept(run, "F002"),
+    ]
+    memo = _post(client, monkeypatch, run, _mock_llm_draft(run, ranking))
     assert memo["guard_summary"]["status"] == "clean", memo["guard_summary"]
+
+
+def test_promoted_fund_citing_its_own_terms_or_notes_passes(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, run: dict
+) -> None:
+    ranking = [_kept(run, "F007"), _kept(run, "F004"), _ranked("F002", "SRC-F002-NOTES"), _kept(run, "F003")]
+    dropped = [_ranked("F001", "DQ-F001-CONFLICTING-METADATA")]
+    memo = _post(client, monkeypatch, run, _mock_llm_draft(run, ranking, dropped))
+    assert memo["guard_summary"]["status"] == "clean", memo["guard_summary"]
+    moves = {row["fund_id"]: row["move"] for row in memo["llm_ranking"]["entries"]}
+    assert (moves["F002"], moves["F003"]) == ("up", "same")
 
 
 def test_drop_without_a_cited_entry_is_flagged(
