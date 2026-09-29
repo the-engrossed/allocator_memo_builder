@@ -4,18 +4,23 @@ import { UploadDropzone } from "../components/UploadDropzone";
 import { ValidationIssuesTable } from "../components/ValidationIssuesTable";
 import type { AnalysisResponse, AnalysisStatus } from "../types/api";
 
-export function UploadPage() {
+interface UploadPageProps {
+  analysis: AnalysisResponse | null;
+  onAnalysis: (analysis: AnalysisResponse | null) => void;
+  onContinue: () => void;
+}
+
+export function UploadPage({ analysis, onAnalysis, onContinue }: UploadPageProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
 
   async function handleFile(file: File) {
     setBusy(true);
     setError(null);
     try {
-      setAnalysis(await uploadAnalysis(file));
+      onAnalysis(await uploadAnalysis(file));
     } catch (cause) {
-      setAnalysis(null);
+      onAnalysis(null);
       setError(cause instanceof Error ? cause.message : "Upload failed");
     } finally {
       setBusy(false);
@@ -31,12 +36,18 @@ export function UploadPage() {
           {error}
         </p>
       )}
-      {analysis && <AnalysisResult analysis={analysis} />}
+      {analysis && <AnalysisResult analysis={analysis} onContinue={onContinue} />}
     </div>
   );
 }
 
-function AnalysisResult({ analysis }: { analysis: AnalysisResponse }) {
+function AnalysisResult({
+  analysis,
+  onContinue,
+}: {
+  analysis: AnalysisResponse;
+  onContinue: () => void;
+}) {
   const canContinue = analysis.status !== "invalid";
   return (
     <div className="space-y-6">
@@ -105,6 +116,7 @@ function AnalysisResult({ analysis }: { analysis: AnalysisResponse }) {
       <button
         type="button"
         disabled={!canContinue}
+        onClick={onContinue}
         className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
       >
         Continue to mandate

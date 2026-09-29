@@ -2,7 +2,17 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -78,3 +88,46 @@ class ValidationIssue(Base):
     details: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
     analysis: Mapped[Analysis] = relationship(back_populates="validation_issues")
+
+
+class Mandate(Base):
+    """Allocator constraints for one analysis. All rates and percentages are basis points."""
+
+    __tablename__ = "mandates"
+    __table_args__ = (
+        CheckConstraint(
+            "target_return_bps BETWEEN 0 AND 10000", name="ck_mandates_target_return_bps"
+        ),
+        CheckConstraint(
+            "max_mgmt_fee_bps BETWEEN 0 AND 10000", name="ck_mandates_max_mgmt_fee_bps"
+        ),
+        CheckConstraint(
+            "max_perf_fee_bps BETWEEN 0 AND 10000", name="ck_mandates_max_perf_fee_bps"
+        ),
+        CheckConstraint("max_notice_days BETWEEN 0 AND 3650", name="ck_mandates_max_notice_days"),
+        CheckConstraint(
+            "max_lockup_months BETWEEN 0 AND 120", name="ck_mandates_max_lockup_months"
+        ),
+        CheckConstraint(
+            "strategy_concentration_cap_bps BETWEEN 0 AND 10000",
+            name="ck_mandates_strategy_concentration_cap_bps",
+        ),
+        CheckConstraint("max_candidates BETWEEN 1 AND 20", name="ck_mandates_max_candidates"),
+        CheckConstraint(
+            "cardinality(preferred_strategies) > 0", name="ck_mandates_preferred_strategies"
+        ),
+    )
+
+    analysis_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("analyses.id", ondelete="CASCADE"), primary_key=True
+    )
+    target_return_bps: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_mgmt_fee_bps: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_perf_fee_bps: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_notice_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_lockup_months: Mapped[int] = mapped_column(Integer, nullable=False)
+    preferred_strategies: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
+    strategy_concentration_cap_bps: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_candidates: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

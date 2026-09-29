@@ -40,6 +40,24 @@ export interface AnalysisResponse {
   funds: FundSummary[];
 }
 
+/** Full-replacement mandate body. Rates and percentages are integer basis points. */
+export interface MandatePayload {
+  target_return_bps: number;
+  max_mgmt_fee_bps: number;
+  max_perf_fee_bps: number;
+  max_notice_days: number;
+  max_lockup_months: number;
+  preferred_strategies: string[];
+  strategy_concentration_cap_bps: number;
+  max_candidates: number;
+}
+
+export interface MandateResponse extends MandatePayload {
+  analysis_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface HealthResponse {
   status: string;
   db: boolean;
