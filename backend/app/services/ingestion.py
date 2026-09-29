@@ -522,8 +522,8 @@ def analysis_to_response(analysis: Analysis) -> AnalysisResponse:
             else CommonWindowOut(
                 start=window.start,
                 end=window.end,
+                months=window.months,
                 fund_count=window.fund_count,
-                funds_covering=window.funds_covering,
             )
         ),
     )

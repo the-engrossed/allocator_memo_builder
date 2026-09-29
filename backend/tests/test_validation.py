@@ -397,37 +397,71 @@ def _span(fund_id: str, start: str, months: int, first_row: int) -> list[MappedR
     return rows
 
 
-def test_common_window_is_median_start_to_latest_period() -> None:
+def _months(start: str, count: int) -> list[date]:
+    year, month = int(start[:4]), int(start[5:])
+    periods = []
+    for _ in range(count):
+        periods.append(date(year, month, 1))
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return periods
+
+
+def test_common_window_is_true_overlap_of_funds_with_a_year_of_data() -> None:
     periods = {
-        "A": [date(2021, 1, 1), date(2024, 12, 1)],
-        "B": [date(2021, 1, 1), date(2024, 12, 1)],
-        "C": [date(2022, 6, 1), date(2024, 9, 1)],
+        "A": _months("2021-01", 48),
+        "B": _months("2022-06", 24),
+        "SHORT": _months("2023-01", 6),
     }
-    window = common_window(periods)
-    assert window == CommonWindow(
-        start=date(2021, 1, 1), end=date(2024, 12, 1), fund_count=3, funds_covering=2
+    assert common_window(periods) == CommonWindow(
+        start=date(2022, 6, 1), end=date(2024, 5, 1), months=24, fund_count=2
     )
+    assert common_window({"SHORT": _months("2023-01", 11)}) is None
     assert common_window({}) is None
 
 
-def test_funds_ending_early_or_starting_late_get_a_date_range_warning() -> None:
+def test_common_window_without_overlap_has_no_dates() -> None:
+    periods = {"A": _months("2020-01", 12), "B": _months("2022-01", 12)}
+    assert common_window(periods) == CommonWindow(start=None, end=None, months=0, fund_count=2)
+
+
+def test_only_funds_ending_early_get_a_date_range_warning() -> None:
     rows = [
         *_span("A", "2021-01", 36, 1),
-        *_span("B", "2021-01", 36, 100),
-        *_span("C", "2021-01", 30, 200),
-        *_span("D", "2022-01", 24, 300),
+        *_span("EARLY_END", "2021-01", 30, 100),
+        *_span("LATE_START", "2022-01", 24, 200),
     ]
     issues = [i for i in _validate(_parse(rows)) if i.code is IssueCode.INCONSISTENT_DATE_RANGE]
-    flagged = {i.fund_id: (i.details["ends_early"], i.details["starts_late"]) for i in issues}
-    assert flagged == {"C": (True, False), "D": (False, True)}
-    assert all(i.severity is IssueSeverity.WARNING for i in issues)
-    assert issues[0].details["common_window_start"] == "2021-01-01"
-    assert issues[0].details["common_window_end"] == "2023-12-01"
+    assert [i.fund_id for i in issues] == ["EARLY_END"]
+    assert issues[0].severity is IssueSeverity.WARNING
+    assert issues[0].details == {
+        "first_period": "2021-01-01",
+        "last_period": "2023-06-01",
+        "universe_latest_period": "2023-12-01",
+    }
 
 
-def test_aligned_funds_have_no_date_range_warning() -> None:
-    rows = [*_span("A", "2021-01", 24, 1), *_span("B", "2021-01", 24, 100)]
-    assert IssueCode.INCONSISTENT_DATE_RANGE not in _codes(_validate(_parse(rows)))
+def test_short_common_window_raises_one_universe_info_issue() -> None:
+    rows = [*_span("A", "2021-01", 36, 1), *_span("B", "2022-01", 24, 100)]
+    issues = [i for i in _validate(_parse(rows)) if i.code is IssueCode.COMMON_WINDOW_SHORT]
+    assert len(issues) == 1
+    issue = issues[0]
+    assert issue.severity is IssueSeverity.INFO and issue.fund_id is None
+    assert issue.message == "Metrics use each fund's own history; windows differ."
+    assert issue.details["common_window"] == {
+        "start": "2022-01-01", "end": "2023-12-01", "months": 24, "fund_count": 2,
+    }
+    assert [(f["fund_id"], f["start"], f["end"]) for f in issue.details["funds"]] == [
+        ("A", "2021-01-01", "2023-12-01"),
+        ("B", "2022-01-01", "2023-12-01"),
+    ]
+    assert derive_status(issues, 60) is AnalysisStatus.VALID
+
+
+def test_common_window_of_36_months_is_not_short() -> None:
+    rows = [*_span("A", "2021-01", 36, 1), *_span("B", "2021-01", 36, 100)]
+    codes = _codes(_validate(_parse(rows)))
+    assert IssueCode.COMMON_WINDOW_SHORT not in codes
+    assert IssueCode.INCONSISTENT_DATE_RANGE not in codes
 
 
 def test_status_valid_with_warnings() -> None:

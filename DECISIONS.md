@@ -79,18 +79,19 @@ This is a warning. It does not block the fund or affect the screens and ranking.
 
 **Consequence:** In the sample universe only F007 triggers it, with 60 months, no losses, and about 0.4% volatility. F007 will still rank highly until a human acts on the warning, and the memo should cite the warning next to its metrics.
 
-## Identity and date-range checks are warnings; the common window starts at the median fund start
+## Identity and date-range checks; the common window is the true overlap
 
 **Choice:**
-- `FUND_ID_MISMATCH` warns every fund in a group whose first-row fund names are equal after casefolding and removing non-alphanumerics. It also warns groups whose `fund_id`s are equal under the same normalization.
-- `INCONSISTENT_DATE_RANGE` warns a fund that ends before the universe's latest period, or starts after the common window start.
-- The common window runs from the **median** fund start (the lower median) to the latest period in the universe. It is returned in the analysis response, along with how many funds fully cover it.
+- `FUND_ID_MISMATCH` (warning, per fund) flags every fund in a group whose first-row fund names are equal after casefolding and removing non-alphanumerics. It also flags groups whose `fund_id`s are equal under the same normalization.
+- **Common window:** the true overlap, from the latest start to the earliest end, across funds with at least 12 valid observations. The analysis response returns it with its length in months. When those funds share no month, start and end are null and the length is 0.
+- `INCONSISTENT_DATE_RANGE` (warning, per fund) fires only when a fund's last period is earlier than the universe's latest period. A fund that simply started later is not flagged.
+- `COMMON_WINDOW_SHORT` (info, universe-level, no `fund_id`) fires when the overlap is shorter than 36 months. The message is "Metrics use each fund's own history; windows differ.", and the details list each fund's start and end.
 
-Both checks are warnings only. They never block a fund or merge funds, and they don't affect screening.
+None of these block a fund, merge funds, or affect screening.
 
-**Why:** A strict intersection of all funds' ranges can't be used for "starts after the common window start", because by definition no fund starts after the latest start. It would also collapse to one fund's history as soon as a single recent launch joined the universe. The median start describes where most of the universe begins, and one late fund can't move it. Merging look-alike funds automatically would be silent remediation; flagging them leaves the decision to the allocator.
+**Why:** A fund that stops reporting early may be hiding recent results, so a stale end deserves a per-fund warning. A later launch is normal and is already covered by the track-record screen. The strict overlap is the only window every qualifying fund can be compared on. Funds with fewer than 12 observations are left out of it so one new launch can't collapse it. When the overlap is short, the committee needs to know that fund-to-fund comparisons span different periods. It doesn't need a warning on every fund.
 
-**Consequence:** In the sample, five funds warn on start date (F002, F004, F008, F009, F010), and F004 also warns for ending in May 2026. These are informational. Funds are still measured over their own windows, as the policy requires.
+**Consequence:** In the sample, the overlap across the 8 qualifying funds is September 2022 to May 2026, which is 45 months, so `COMMON_WINDOW_SHORT` does not fire. F008 and F010 are left out of the overlap because they have fewer than 12 observations. Only F004 gets `INCONSISTENT_DATE_RANGE`, because it ends in May 2026. Metrics are still computed over each fund's own history.
 
 ## Slice 3 acceptance: app metrics reproduce the sample generator (closed)
 

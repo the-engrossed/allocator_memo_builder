@@ -220,10 +220,13 @@ V1 validation must cover:
 - Possible duplicate identities (`FUND_ID_MISMATCH` warning): the same normalized fund name
   (casefolded, non-alphanumerics removed) under more than one `fund_id`, or `fund_id`s that
   differ only by case, whitespace, or punctuation.
-- Misaligned histories (`INCONSISTENT_DATE_RANGE` warning): a fund whose last period is
-  before the universe's latest period, or whose first period is after the common window
-  start. The common window runs from the median fund start to the latest period and is
-  returned in the analysis response.
+- Stale histories (`INCONSISTENT_DATE_RANGE` warning, per fund): a fund whose last period
+  is before the universe's latest period. Late starts are not flagged.
+- Common window: the true overlap (latest start → earliest end) across funds with ≥12 valid
+  observations, returned in the analysis response with its length in months. When it is
+  shorter than 36 months, one universe-level `COMMON_WINDOW_SHORT` info issue (no
+  `fund_id`) lists each fund's start and end: "Metrics use each fund's own history; windows
+  differ."
 
 Bare numeric returns (no `%` suffix) are interpreted **per fund**, never once for the whole
 file: percentage points when the median |value| > 0.25, otherwise decimals, with a warning

@@ -185,7 +185,7 @@ def test_sample_universe_plants_expected_issues() -> None:
     assert by_code == {
         IssueCode.CONFLICTING_METADATA: {"F001"},
         IssueCode.FUND_ID_MISMATCH: {"F001", "F010"},
-        IssueCode.INCONSISTENT_DATE_RANGE: {"F002", "F004", "F008", "F009", "F010"},
+        IssueCode.INCONSISTENT_DATE_RANGE: {"F004"},
         IssueCode.MISSING_MONTHS: {"F004", "F006", "F009"},
         IssueCode.INVALID_RETURN: {"F006"},
         IssueCode.SMOOTH_RETURNS: {"F007"},
@@ -196,11 +196,10 @@ def test_sample_universe_plants_expected_issues() -> None:
     }
     metadata = next(i for i in issues if i.code is IssueCode.INVALID_METADATA)
     assert metadata.field == "perf_fee_bps"
-    ends_early = {
-        i.fund_id for i in issues
-        if i.code is IssueCode.INCONSISTENT_DATE_RANGE and i.details["ends_early"]
-    }
-    assert ends_early == {"F004"}
+    date_range = next(i for i in issues if i.code is IssueCode.INCONSISTENT_DATE_RANGE)
+    assert date_range.details["last_period"] == "2026-05-01"
+    assert date_range.details["universe_latest_period"] == "2026-08-01"
+    assert IssueCode.COMMON_WINDOW_SHORT not in {i.code for i in issues}
 
     counts: dict[str, int] = {}
     last_period: dict[str, object] = {}

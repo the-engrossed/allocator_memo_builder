@@ -44,12 +44,13 @@ class FundSummaryOut(BaseModel):
 
 
 class CommonWindowOut(BaseModel):
-    """Median fund start to the universe's latest period; see INCONSISTENT_DATE_RANGE."""
+    """True overlap across funds with at least 12 valid observations; start/end are null
+    when they share no month."""
 
-    start: date
-    end: date
+    start: date | None
+    end: date | None
+    months: int
     fund_count: int
-    funds_covering: int
 
 
 class AnalysisResponse(BaseModel):

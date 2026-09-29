@@ -35,6 +35,11 @@ SMOOTH_MIN_OBSERVATIONS_NO_LOSS = 24
 SMOOTH_MAX_ANNUALIZED_VOL = Decimal("0.01")
 SMOOTH_MIN_OBSERVATIONS_VOL = 12
 
+# The common window is the true overlap of funds with at least this many observations;
+# a shorter overlap than COMMON_WINDOW_SHORT_MONTHS raises a universe-level info issue.
+COMMON_WINDOW_MIN_OBSERVATIONS = 12
+COMMON_WINDOW_SHORT_MONTHS = 36
+
 
 @dataclass
 class ValidationIssue:
@@ -401,23 +406,32 @@ def _missing_month_issues(observations: list[ParsedRow]) -> list[ValidationIssue
 
 @dataclass(frozen=True)
 class CommonWindow:
-    """The universe's reference window: from the median fund start to the latest period."""
+    """True overlap (latest start to earliest end) across funds with enough history.
 
-    start: date
-    end: date
+    start and end are None when those funds share no month.
+    """
+
+    start: date | None
+    end: date | None
+    months: int
     fund_count: int
-    funds_covering: int
 
 
 def common_window(periods_by_fund: Mapping[str, list[date]]) -> CommonWindow | None:
-    spans = [(min(periods), max(periods)) for periods in periods_by_fund.values() if periods]
+    """None when no fund has at least COMMON_WINDOW_MIN_OBSERVATIONS valid observations."""
+    spans = [
+        (min(periods), max(periods))
+        for periods in periods_by_fund.values()
+        if len(periods) >= COMMON_WINDOW_MIN_OBSERVATIONS
+    ]
     if not spans:
         return None
-    starts = sorted(start for start, _ in spans)
-    start = starts[(len(starts) - 1) // 2]
-    end = max(end for _, end in spans)
-    covering = sum(1 for first, last in spans if first <= start and last >= end)
-    return CommonWindow(start=start, end=end, fund_count=len(spans), funds_covering=covering)
+    start = max(first for first, _ in spans)
+    end = min(last for _, last in spans)
+    if start > end:
+        return CommonWindow(start=None, end=None, months=0, fund_count=len(spans))
+    months = (end.year - start.year) * 12 + end.month - start.month + 1
+    return CommonWindow(start=start, end=end, months=months, fund_count=len(spans))
 
 
 def _normalize_identifier(value: str) -> str:
@@ -479,25 +493,22 @@ def _fund_id_mismatch_issues(rows: list[ParsedRow]) -> list[ValidationIssue]:
 
 
 def _date_range_issues(observations: list[ParsedRow]) -> list[ValidationIssue]:
+    """INCONSISTENT_DATE_RANGE per fund that stops before the universe's latest period, and
+    one universe-level COMMON_WINDOW_SHORT when the true overlap is under 36 months."""
     periods: dict[str, list[date]] = defaultdict(list)
     rows: dict[str, list[int]] = defaultdict(list)
     for row in observations:
         assert row.fund_id is not None and row.period is not None
         periods[row.fund_id].append(row.period)
         rows[row.fund_id].append(row.row_number)
-    window = common_window(periods)
-    if window is None:
+    if not periods:
         return []
+    universe_end = max(max(fund_periods) for fund_periods in periods.values())
 
     issues: list[ValidationIssue] = []
     for fund_id in sorted(periods):
         first, last = min(periods[fund_id]), max(periods[fund_id])
-        reasons = []
-        if last < window.end:
-            reasons.append(f"ends {last.isoformat()}, before the universe's latest period")
-        if first > window.start:
-            reasons.append(f"starts {first.isoformat()}, after the common window start")
-        if not reasons:
+        if last >= universe_end:
             continue
         issues.append(
             ValidationIssue(
@@ -507,17 +518,45 @@ def _date_range_issues(observations: list[ParsedRow]) -> list[ValidationIssue]:
                 field="period",
                 row_numbers=sorted(rows[fund_id]),
                 message=(
-                    f"{fund_id}: {'; '.join(reasons)} ({window.start.isoformat()} to "
-                    f"{window.end.isoformat()}). Its metrics cover a different period than "
-                    "most of the universe."
+                    f"{fund_id}: last reported period is {last.isoformat()}, before the "
+                    f"universe's latest period {universe_end.isoformat()}."
                 ),
                 details={
                     "first_period": first.isoformat(),
                     "last_period": last.isoformat(),
-                    "common_window_start": window.start.isoformat(),
-                    "common_window_end": window.end.isoformat(),
-                    "ends_early": last < window.end,
-                    "starts_late": first > window.start,
+                    "universe_latest_period": universe_end.isoformat(),
+                },
+            )
+        )
+
+    window = common_window(periods)
+    if window is not None and window.months < COMMON_WINDOW_SHORT_MONTHS:
+        issues.append(
+            ValidationIssue(
+                code=IssueCode.COMMON_WINDOW_SHORT,
+                severity=IssueSeverity.INFO,
+                field="period",
+                message="Metrics use each fund's own history; windows differ.",
+                details={
+                    "common_window": {
+                        "start": window.start.isoformat() if window.start else None,
+                        "end": window.end.isoformat() if window.end else None,
+                        "months": window.months,
+                        "fund_count": window.fund_count,
+                    },
+                    "threshold_months": COMMON_WINDOW_SHORT_MONTHS,
+                    "min_observations": COMMON_WINDOW_MIN_OBSERVATIONS,
+                    "funds": [
+                        {
+                            "fund_id": fund_id,
+                            "start": min(periods[fund_id]).isoformat(),
+                            "end": max(periods[fund_id]).isoformat(),
+                            "observations": len(periods[fund_id]),
+                            "in_common_window": len(periods[fund_id])
+                            >= COMMON_WINDOW_MIN_OBSERVATIONS,
+                        }
+                        for fund_id in sorted(periods)
+                    ],
                 },
             )
         )

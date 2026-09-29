@@ -91,11 +91,12 @@ def test_sample_upload_reports_common_window(client: TestClient) -> None:
             "/api/analyses", files={"file": ("sample.csv", handle, "text/csv")}
         ).json()
     assert body["common_window"] == {
-        "start": "2021-09-01",
-        "end": "2026-08-01",
-        "fund_count": 10,
-        "funds_covering": 5,
+        "start": "2022-09-01",
+        "end": "2026-05-01",
+        "months": 45,
+        "fund_count": 8,
     }
+    assert not any(issue["code"] == "COMMON_WINDOW_SHORT" for issue in body["issues"])
 
 
 def test_missing_analysis_is_404(client: TestClient) -> None:
