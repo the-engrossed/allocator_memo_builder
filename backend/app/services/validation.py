@@ -1,16 +1,38 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from dataclasses import field as dc_field
 from datetime import date
+from decimal import Decimal
+from statistics import stdev
 
-from app.domain.enums import AnalysisStatus, IssueCode, IssueSeverity, ReturnInputUnit
+from app.domain.enums import AnalysisStatus, IssueCode, IssueSeverity, LiquidityFrequency
 from app.services.ingestion import (
+    AMBIGUOUS_MEDIAN_FLOOR,
+    MAX_ABS_MONTHLY_RETURN,
+    PERCENT_MEDIAN_THRESHOLD,
     METADATA_FIELDS,
+    METADATA_INT_LIMITS,
     ParsedRow,
+    ParseError,
     ReturnUnitInference,
+    parse_bounded_int,
+    parse_liquidity_frequency,
 )
+
+
+# Issues whose fund cannot be analyzed at all: no single trustworthy series exists.
+BLOCKING_CODES: frozenset[IssueCode] = frozenset(
+    {IssueCode.DUPLICATE_PERIOD, IssueCode.RETURN_OUT_OF_RANGE}
+)
+
+# SMOOTH_RETURNS: no negative month across at least this many observations ...
+SMOOTH_MIN_OBSERVATIONS_NO_LOSS = 24
+# ... or annualized volatility below this, evaluated once a fund has a year of data.
+SMOOTH_MAX_ANNUALIZED_VOL = Decimal("0.01")
+SMOOTH_MIN_OBSERVATIONS_VOL = 12
 
 
 @dataclass
@@ -28,7 +50,7 @@ def validate_upload(
     *,
     missing_columns: list[str],
     parsed_rows: list[ParsedRow],
-    unit_inference: ReturnUnitInference | None,
+    unit_inferences: Mapping[str | None, ReturnUnitInference],
 ) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     if missing_columns:
@@ -43,20 +65,18 @@ def validate_upload(
         )
         return issues
 
-    if unit_inference is not None:
-        issues.extend(_return_unit_issues(unit_inference))
+    for fund_id, inference in unit_inferences.items():
+        issues.extend(_return_unit_issues(fund_id, inference))
 
     issues.extend(_parse_issues(parsed_rows))
+    issues.extend(_out_of_range_issues(parsed_rows))
+    issues.extend(_metadata_issues(parsed_rows))
     issues.extend(_duplicate_period_issues(parsed_rows))
     issues.extend(_conflicting_metadata_issues(parsed_rows))
 
-    duplicate_keys = _duplicate_keys(parsed_rows)
-    observations = [
-        row
-        for row in parsed_rows
-        if _is_valid_observation(row) and (row.fund_id, row.period) not in duplicate_keys
-    ]
+    observations = select_observations(parsed_rows)
     issues.extend(_missing_month_issues(observations))
+    issues.extend(_smooth_return_issues(observations))
     issues.extend(_short_history_issues(observations))
     return issues
 
@@ -90,9 +110,7 @@ def derive_status(issues: list[ValidationIssue], observation_count: int) -> Anal
 
 
 def is_analysis_blocked(fund_id: str, issues: list[ValidationIssue]) -> bool:
-    return any(
-        issue.fund_id == fund_id and issue.code is IssueCode.DUPLICATE_PERIOD for issue in issues
-    )
+    return any(issue.fund_id == fund_id and issue.code in BLOCKING_CODES for issue in issues)
 
 
 def _is_valid_observation(row: ParsedRow) -> bool:
@@ -105,36 +123,123 @@ def _is_valid_observation(row: ParsedRow) -> bool:
     )
 
 
-def _return_unit_issues(inference: ReturnUnitInference) -> list[ValidationIssue]:
+def _return_unit_issues(
+    fund_id: str | None, inference: ReturnUnitInference
+) -> list[ValidationIssue]:
+    label = fund_id or "rows with no fund_id"
+    details = {
+        "unit": inference.unit.value,
+        "median_abs_bare": inference.median_abs_bare,
+        "bare_count": inference.bare_count,
+        "ambiguous": inference.ambiguous,
+        "percent_above_median": str(PERCENT_MEDIAN_THRESHOLD),
+        "ambiguous_from_median": str(AMBIGUOUS_MEDIAN_FLOOR),
+    }
     issues = [
         ValidationIssue(
             code=IssueCode.RETURN_UNIT_INFERRED,
             severity=IssueSeverity.INFO,
-            message=inference.message,
-            details={
-                "unit": inference.unit.value,
-                "median_abs_bare": inference.median_abs_bare,
-                "bare_count": inference.bare_count,
-                "mixed_scale": inference.mixed_scale,
-            },
+            fund_id=fund_id,
+            field="net_return",
+            message=f"{label}: {inference.message}",
+            details=details,
         )
     ]
-    if inference.mixed_scale:
+    if inference.ambiguous:
         issues.append(
             ValidationIssue(
                 code=IssueCode.RETURN_UNIT_INFERRED,
                 severity=IssueSeverity.WARNING,
+                fund_id=fund_id,
+                field="net_return",
                 message=(
-                    "Bare numeric returns mix values at or below 1.0 with values above 1.0. "
-                    f"The file-level rule treats unadorned numbers as "
-                    f"{'percentage points' if inference.unit is ReturnInputUnit.PERCENT else 'decimals'}, "
-                    "which can make cross-fund comparisons unreliable."
+                    f"{label}: the median absolute bare return ({inference.median_abs_bare:.4g}) "
+                    f"is between {AMBIGUOUS_MEDIAN_FLOOR} and {PERCENT_MEDIAN_THRESHOLD}, so "
+                    "the unit is ambiguous. Values are read as decimals; confirm the fund's "
+                    "reporting unit."
+                ),
+                details=details,
+            )
+        )
+    return issues
+
+
+def _out_of_range_issues(rows: list[ParsedRow]) -> list[ValidationIssue]:
+    by_fund: dict[str | None, list[ParsedRow]] = defaultdict(list)
+    for row in rows:
+        if (
+            row.net_return is not None
+            and row.return_error is None
+            and abs(row.net_return) > MAX_ABS_MONTHLY_RETURN
+        ):
+            by_fund[row.fund_id].append(row)
+
+    issues: list[ValidationIssue] = []
+    for fund_id, fund_rows in by_fund.items():
+        label = fund_id or "rows with no fund_id"
+        issues.append(
+            ValidationIssue(
+                code=IssueCode.RETURN_OUT_OF_RANGE,
+                severity=IssueSeverity.ERROR,
+                fund_id=fund_id,
+                field="net_return",
+                row_numbers=[row.row_number for row in fund_rows],
+                message=(
+                    f"{label}: {len(fund_rows)} monthly return(s) exceed "
+                    f"±{MAX_ABS_MONTHLY_RETURN:.0%} after unit conversion. The fund is blocked "
+                    "from analysis until the source data is corrected."
                 ),
                 details={
-                    "unit": inference.unit.value,
-                    "median_abs_bare": inference.median_abs_bare,
-                    "bare_count": inference.bare_count,
-                    "mixed_scale": True,
+                    "limit": str(MAX_ABS_MONTHLY_RETURN),
+                    "values": [
+                        {"row_number": row.row_number, "net_return": str(row.net_return)}
+                        for row in fund_rows
+                    ],
+                },
+            )
+        )
+    return issues
+
+
+def _metadata_issues(rows: list[ParsedRow]) -> list[ValidationIssue]:
+    """Flag screen-critical metadata that is not a bounded integer or an allowed liquidity value."""
+    invalid: dict[tuple[str, str], list[tuple[int, str, str]]] = defaultdict(list)
+    for row in rows:
+        if row.fund_id is None:
+            continue
+        value = row.values.get("liquidity_frequency", "")
+        try:
+            parse_liquidity_frequency(value)
+        except ParseError as exc:
+            invalid[(row.fund_id, "liquidity_frequency")].append((row.row_number, value, str(exc)))
+        for field_name, maximum in METADATA_INT_LIMITS.items():
+            value = row.values.get(field_name, "")
+            try:
+                parse_bounded_int(value, maximum)
+            except ParseError as exc:
+                invalid[(row.fund_id, field_name)].append((row.row_number, value, str(exc)))
+
+    issues: list[ValidationIssue] = []
+    for (fund_id, field_name), failures in invalid.items():
+        if field_name == "liquidity_frequency":
+            expected: object = [item.value for item in LiquidityFrequency]
+        else:
+            expected = {"min": 0, "max": METADATA_INT_LIMITS[field_name]}
+        issues.append(
+            ValidationIssue(
+                code=IssueCode.INVALID_METADATA,
+                severity=IssueSeverity.ERROR,
+                fund_id=fund_id,
+                field=field_name,
+                row_numbers=[row_number for row_number, _, _ in failures],
+                message=(
+                    f"{fund_id}: {len(failures)} row(s) have an invalid {field_name} "
+                    f"({failures[0][2]}). Hard screens that read {field_name} cannot verify "
+                    "this fund."
+                ),
+                details={
+                    "expected": expected,
+                    "values": sorted({value for _, value, _ in failures}),
                 },
             )
         )
@@ -286,6 +391,53 @@ def _missing_month_issues(observations: list[ParsedRow]) -> list[ValidationIssue
                     f"{min(periods).isoformat()} and {max(periods).isoformat()}."
                 ),
                 details={"missing_months": [month.isoformat() for month in missing]},
+            )
+        )
+    return issues
+
+
+def _smooth_return_issues(observations: list[ParsedRow]) -> list[ValidationIssue]:
+    """Warn on return streams too smooth to be plausible for a hedge fund."""
+    by_fund: dict[str, list[ParsedRow]] = defaultdict(list)
+    for row in observations:
+        assert row.fund_id is not None and row.net_return is not None
+        by_fund[row.fund_id].append(row)
+
+    issues: list[ValidationIssue] = []
+    for fund_id, fund_rows in by_fund.items():
+        returns = [row.net_return for row in fund_rows if row.net_return is not None]
+        count = len(returns)
+        no_losses = count >= SMOOTH_MIN_OBSERVATIONS_NO_LOSS and min(returns) >= 0
+        volatility = (
+            stdev(returns) * Decimal(12).sqrt() if count >= SMOOTH_MIN_OBSERVATIONS_VOL else None
+        )
+        low_volatility = volatility is not None and volatility < SMOOTH_MAX_ANNUALIZED_VOL
+        if not (no_losses or low_volatility):
+            continue
+        reasons = []
+        if no_losses:
+            reasons.append(f"no negative month across {count} observations")
+        if low_volatility:
+            reasons.append(f"annualized volatility {volatility:.2%}")
+        issues.append(
+            ValidationIssue(
+                code=IssueCode.SMOOTH_RETURNS,
+                severity=IssueSeverity.WARNING,
+                fund_id=fund_id,
+                field="net_return",
+                row_numbers=sorted(row.row_number for row in fund_rows),
+                message=(
+                    f"{fund_id}: returns are unusually smooth ({'; '.join(reasons)}). "
+                    "Verify pricing, administration, and audit before relying on its "
+                    "risk-adjusted metrics."
+                ),
+                details={
+                    "observations": count,
+                    "negative_months": sum(1 for value in returns if value < 0),
+                    "annualized_volatility": None if volatility is None else str(volatility),
+                    "no_loss_min_observations": SMOOTH_MIN_OBSERVATIONS_NO_LOSS,
+                    "volatility_threshold": str(SMOOTH_MAX_ANNUALIZED_VOL),
+                },
             )
         )
     return issues

@@ -1,4 +1,4 @@
-import type { MandatePayload } from "../types/api";
+import { LIQUIDITY_FREQUENCIES, type LiquidityFrequency, type MandatePayload } from "../types/api";
 
 /** Form initialization for an analysis with no saved mandate. The API applies no defaults. */
 export const MANDATE_DEFAULTS: MandatePayload = {
@@ -7,7 +7,12 @@ export const MANDATE_DEFAULTS: MandatePayload = {
   max_perf_fee_bps: 2000,
   max_notice_days: 90,
   max_lockup_months: 12,
+  min_liquidity_frequency: "quarterly",
+  max_volatility_bps: 1500,
+  max_drawdown_bps: 2000,
+  min_track_record_months: 36,
   preferred_strategies: ["Macro", "Equity L/S", "Credit"],
+  excluded_strategies: [],
   strategy_concentration_cap_bps: 4000,
   max_candidates: 5,
 };
@@ -17,9 +22,12 @@ export const MANDATE_LIMITS = {
   target_return_bps: { min: 0, max: 10_000 },
   max_mgmt_fee_bps: { min: 0, max: 10_000 },
   max_perf_fee_bps: { min: 0, max: 10_000 },
+  max_volatility_bps: { min: 0, max: 10_000 },
+  max_drawdown_bps: { min: 0, max: 10_000 },
   strategy_concentration_cap_bps: { min: 0, max: 10_000 },
   max_notice_days: { min: 0, max: 3650 },
   max_lockup_months: { min: 0, max: 120 },
+  min_track_record_months: { min: 0, max: 360 },
   max_candidates: { min: 1, max: 20 },
 } as const;
 
@@ -30,13 +38,23 @@ export interface MandateDraft {
   max_perf_fee_bps: string;
   max_notice_days: string;
   max_lockup_months: string;
+  min_liquidity_frequency: LiquidityFrequency;
+  max_volatility_pct: string;
+  max_drawdown_pct: string;
+  min_track_record_months: string;
   preferred_strategies: string[];
+  excluded_strategies: string[];
   strategy_concentration_cap_pct: string;
   max_candidates: string;
 }
 
 export type MandateDraftField = keyof MandateDraft;
+export type TextDraftField = Exclude<
+  MandateDraftField,
+  "min_liquidity_frequency" | "preferred_strategies" | "excluded_strategies"
+>;
 export type MandateFieldErrors = Partial<Record<MandateDraftField, string>>;
+export type StrategyRole = "preferred" | "excluded";
 
 export type DraftResult =
   | { ok: true; payload: MandatePayload }
@@ -96,6 +114,10 @@ function inRange(
   return { ok: true, value };
 }
 
+export function isLiquidityFrequency(value: string): value is LiquidityFrequency {
+  return (LIQUIDITY_FREQUENCIES as readonly string[]).includes(value);
+}
+
 /** Trims, drops blanks, and removes duplicates while keeping first-seen order. */
 export function normalizeStrategies(strategies: readonly string[]): string[] {
   const normalized: string[] = [];
@@ -110,7 +132,7 @@ export function normalizeStrategies(strategies: readonly string[]): string[] {
 
 /**
  * Ordered union of saved selections, explicit defaults, uploaded-universe strategies, and any
- * other current selections. Anchoring on the saved list keeps chip positions stable while
+ * other current selections. Anchoring on the saved lists keeps chip positions stable while
  * the user toggles.
  */
 export function strategyOptions(
@@ -132,6 +154,24 @@ export function toggleStrategy(selected: readonly string[], strategy: string): s
     : [...selected, strategy];
 }
 
+/** Toggles a strategy in one role; adding it to a role removes it from the other. */
+export function toggleStrategyRole(
+  draft: MandateDraft,
+  strategy: string,
+  role: StrategyRole,
+): MandateDraft {
+  const preferred = role === "preferred";
+  const own = preferred ? draft.preferred_strategies : draft.excluded_strategies;
+  const other = preferred ? draft.excluded_strategies : draft.preferred_strategies;
+  const nextOwn = toggleStrategy(own, strategy);
+  const nextOther = nextOwn.includes(strategy) ? other.filter((name) => name !== strategy) : other;
+  return {
+    ...draft,
+    preferred_strategies: preferred ? nextOwn : nextOther,
+    excluded_strategies: preferred ? nextOther : nextOwn,
+  };
+}
+
 export function draftFromMandate(mandate: MandatePayload): MandateDraft {
   return {
     target_return_pct: bpsToPercentText(mandate.target_return_bps),
@@ -139,7 +179,12 @@ export function draftFromMandate(mandate: MandatePayload): MandateDraft {
     max_perf_fee_bps: String(mandate.max_perf_fee_bps),
     max_notice_days: String(mandate.max_notice_days),
     max_lockup_months: String(mandate.max_lockup_months),
+    min_liquidity_frequency: mandate.min_liquidity_frequency,
+    max_volatility_pct: bpsToPercentText(mandate.max_volatility_bps),
+    max_drawdown_pct: bpsToPercentText(mandate.max_drawdown_bps),
+    min_track_record_months: String(mandate.min_track_record_months),
     preferred_strategies: normalizeStrategies(mandate.preferred_strategies),
+    excluded_strategies: normalizeStrategies(mandate.excluded_strategies),
     strategy_concentration_cap_pct: bpsToPercentText(mandate.strategy_concentration_cap_bps),
     max_candidates: String(mandate.max_candidates),
   };
@@ -158,42 +203,42 @@ export function draftToPayload(draft: MandateDraft): DraftResult {
     return 0;
   }
 
-  const target = limits.target_return_bps;
-  const mgmt = limits.max_mgmt_fee_bps;
-  const perf = limits.max_perf_fee_bps;
-  const notice = limits.max_notice_days;
-  const lockup = limits.max_lockup_months;
-  const cap = limits.strategy_concentration_cap_bps;
-  const candidates = limits.max_candidates;
+  function percent(field: TextDraftField, limit: { min: number; max: number }): number {
+    return take(field, parsePercentToBps(draft[field], limit.min, limit.max));
+  }
+
+  function integer(field: TextDraftField, limit: { min: number; max: number }): number {
+    return take(field, parseInteger(draft[field], limit.min, limit.max));
+  }
+
+  if (!isLiquidityFrequency(draft.min_liquidity_frequency)) {
+    errors.min_liquidity_frequency = "Choose a redemption frequency.";
+  }
 
   const payload: MandatePayload = {
-    target_return_bps: take(
-      "target_return_pct",
-      parsePercentToBps(draft.target_return_pct, target.min, target.max),
-    ),
-    max_mgmt_fee_bps: take("max_mgmt_fee_bps", parseInteger(draft.max_mgmt_fee_bps, mgmt.min, mgmt.max)),
-    max_perf_fee_bps: take("max_perf_fee_bps", parseInteger(draft.max_perf_fee_bps, perf.min, perf.max)),
-    max_notice_days: take(
-      "max_notice_days",
-      parseInteger(draft.max_notice_days, notice.min, notice.max),
-    ),
-    max_lockup_months: take(
-      "max_lockup_months",
-      parseInteger(draft.max_lockup_months, lockup.min, lockup.max),
-    ),
+    target_return_bps: percent("target_return_pct", limits.target_return_bps),
+    max_mgmt_fee_bps: integer("max_mgmt_fee_bps", limits.max_mgmt_fee_bps),
+    max_perf_fee_bps: integer("max_perf_fee_bps", limits.max_perf_fee_bps),
+    max_notice_days: integer("max_notice_days", limits.max_notice_days),
+    max_lockup_months: integer("max_lockup_months", limits.max_lockup_months),
+    min_liquidity_frequency: draft.min_liquidity_frequency,
+    max_volatility_bps: percent("max_volatility_pct", limits.max_volatility_bps),
+    max_drawdown_bps: percent("max_drawdown_pct", limits.max_drawdown_bps),
+    min_track_record_months: integer("min_track_record_months", limits.min_track_record_months),
     preferred_strategies: normalizeStrategies(draft.preferred_strategies),
-    strategy_concentration_cap_bps: take(
+    excluded_strategies: normalizeStrategies(draft.excluded_strategies),
+    strategy_concentration_cap_bps: percent(
       "strategy_concentration_cap_pct",
-      parsePercentToBps(draft.strategy_concentration_cap_pct, cap.min, cap.max),
+      limits.strategy_concentration_cap_bps,
     ),
-    max_candidates: take(
-      "max_candidates",
-      parseInteger(draft.max_candidates, candidates.min, candidates.max),
-    ),
+    max_candidates: integer("max_candidates", limits.max_candidates),
   };
 
-  if (payload.preferred_strategies.length === 0) {
-    errors.preferred_strategies = "Select at least one strategy.";
+  const overlap = payload.preferred_strategies.filter((name) =>
+    payload.excluded_strategies.includes(name),
+  );
+  if (overlap.length > 0) {
+    errors.excluded_strategies = `Cannot be both preferred and excluded: ${overlap.join(", ")}.`;
   }
 
   return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, payload };

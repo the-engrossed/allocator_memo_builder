@@ -1,86 +1,467 @@
-id,manager,strategy,date,return,liquidity_frequency,notice_days,lockup_months,mgmt_fee_bps,perf_fee_bps,notes
-F001,Northstar Equity,Equity,Jan-2023,0.008,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,02/2023,0.009,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,3/31/2023,0.010,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-04,1.1%,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-05,0.012,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-06,0.008,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-07,0.009,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-08,0.010,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-09,0.011,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-10,0.012,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-11,0.008,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2023-12,0.009,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2024-01,0.010,monthly,30,0,100,200,
-F001,Northstar Equity,Equity,2024-02,0.011,monthly,30,0,100,200,
-F002,Harbor Credit,Credit,2023-01,0.006,monthly,30,0,100,200,
-F002,Harbor Credit,Credit,2023-02,0.007,monthly,30,0,100,200,
-F002,Harbor Credit,Credit,2023-03,0.008,monthly,30,0,100,200,
-F002,Harbor Credit,Credit,2023-04,0.009,monthly,30,0,100,200,
-F002,Harbor Credit,Credit,2023-05,0.010,monthly,30,0,100,200,
-F002,Harbor Credit,Credit,2023-06,0.011,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-01,0.007,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-02,0.008,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-03,0.009,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-04,0.010,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-05,0.007,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-06,0.008,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-08,0.010,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-09,0.007,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-10,0.008,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-11,0.009,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2023-12,0.010,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2024-01,0.007,monthly,30,0,100,200,
-F003,Cedar Macro,Macro,2024-02,0.008,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-01,0.009,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-02,0.010,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-03,0.011,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-04,0.009,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-05,0.010,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-06,0.011,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-07,0.009,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-08,0.010,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-09,0.011,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-10,0.009,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-11,0.010,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-12,0.011,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2024-01,0.009,monthly,30,0,100,200,
-F004,Pinnacle Multi,Multi-strategy,2023-03,0.011,monthly,30,0,100,200,"duplicate march"
-F005,Summit Long/Short,Equity,2023-01,0.010,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-02,0.011,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-03,0.012,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-04,0.013,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-05,0.010,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-06,0.011,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-07,0.012,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-08,0.013,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-09,0.010,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-10,0.011,monthly,30,0,100,200,
-F005,Summit Long/Short,Equity,2023-11,0.012,monthly,30,0,100,200,
-F005,Summit Long/Short,Credit,2023-12,0.013,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-01,0.005,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-02,0.006,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-03,0.007,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-04,0.005,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-05,0.006,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-06,0.007,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-07,0.005,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-08,0.006,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-09,0.007,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-10,0.005,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-11,0.006,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,2023-12,0.007,monthly,30,0,100,200,
-F006,Atlas Event,Event-driven,not-a-date,0.004,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-01,0.004,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-02,0.005,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-03,0.006,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-04,0.007,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-05,0.008,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-06,0.004,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-07,0.005,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-08,0.006,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-09,0.007,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-10,0.008,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-11,0.004,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2023-12,0.005,monthly,30,0,100,200,
-F007,Beacon Quant,Quant,2024-01,n/a,monthly,30,0,100,200,
+fund_id,fund_name,strategy,period,net_return,liquidity_frequency,notice_days,lockup_months,mgmt_fee_bps,perf_fee_bps,notes
+F001,Northstar Equity Partners,Equity L/S,2021-09,-0.0359,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2021-10,0.0488,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2021-11,0.0304,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2021-12,0.0289,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-01,-0.0523,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-02,-0.0125,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-03,0.0324,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-04,-0.0469,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-05,-0.0002,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-06,-0.0329,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-07,0.0774,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-08,0.0118,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-09,-0.0518,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-10,0.0649,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-11,0.0632,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2022-12,-0.0236,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-01,0.0378,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-02,-0.0014,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-03,0.0203,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-04,0.0332,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-05,-0.0015,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-06,0.0559,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-07,0.0159,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-08,-0.0025,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-09,-0.0093,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-10,0.0063,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-11,0.0599,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2023-12,0.0171,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-01,0.0266,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-02,0.0320,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-03,0.0160,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-04,-0.0143,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-05,0.0214,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-06,0.0412,monthly,45,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-07,0.0283,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-08,0.0217,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-09,0.0064,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-10,-0.0048,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-11,0.0666,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2024-12,-0.0095,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-01,0.0419,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-02,-0.0037,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-03,-0.0335,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-04,0.0025,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-05,0.0506,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-06,0.0447,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-07,0.0328,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-08,0.0356,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-09,0.0277,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-10,0.0079,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-11,-0.0027,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2025-12,-0.0073,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2026-01,-0.0341,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2026-02,0.0137,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2026-03,-0.0266,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2026-04,0.0480,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2026-05,0.0190,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2026-06,-0.0302,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2026-07,0.0235,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F001,Northstar Equity Partners,Equity L/S,2026-08,0.0115,monthly,30,12,150,2000,Fundamental long/short; net exposure 30-60%.
+F002,Harbor Credit Opportunities,Credit,Sep-2022,-2.33%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Oct-2022,0.98%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Nov-2022,-0.07%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Dec-2022,-0.74%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jan-2023,1.47%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Feb-2023,0.45%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Mar-2023,-0.06%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Apr-2023,1.10%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,May-2023,0.53%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jun-2023,1.51%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jul-2023,1.11%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Aug-2023,0.84%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Sep-2023,-1.90%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Oct-2023,0.44%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Nov-2023,2.16%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Dec-2023,1.59%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jan-2024,2.13%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Feb-2024,0.52%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Mar-2024,1.14%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Apr-2024,-0.43%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,May-2024,1.38%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jun-2024,1.68%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jul-2024,1.10%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Aug-2024,0.75%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Sep-2024,1.30%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Oct-2024,0.78%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Nov-2024,1.71%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Dec-2024,-0.41%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jan-2025,1.72%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Feb-2025,0.23%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Mar-2025,-3.80%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Apr-2025,-2.22%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,May-2025,1.25%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jun-2025,3.00%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jul-2025,1.54%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Aug-2025,0.88%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Sep-2025,1.02%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Oct-2025,1.19%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Nov-2025,0.85%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Dec-2025,1.31%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jan-2026,-0.75%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Feb-2026,0.63%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Mar-2026,-0.26%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Apr-2026,1.36%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,May-2026,0.41%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jun-2026,-0.10%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Jul-2026,-0.34%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F002,Harbor Credit Opportunities,Credit,Aug-2026,2.49%,quarterly,60,12,125,1500,Performing and stressed corporate credit; gates at 25% per quarter.
+F003,Cedar Global Macro,Macro,09/2021,7.83,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,10/2021,1.31,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,11/2021,3.57,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,12/2021,8.09,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,01/2022,3.08,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,02/2022,0.30,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,03/2022,-2.32,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,04/2022,1.26,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,05/2022,-3.22,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,06/2022,3.96,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,07/2022,0.68,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,08/2022,-0.70,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,09/2022,-2.23,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,10/2022,-1.23,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,11/2022,-0.99,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,12/2022,0.50,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,01/2023,-2.32,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,02/2023,2.82,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,03/2023,2.09,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,04/2023,-3.72,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,05/2023,-1.83,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,06/2023,-1.88,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,07/2023,2.08,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,08/2023,0.13,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,09/2023,0.34,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,10/2023,2.16,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,11/2023,-4.19,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,12/2023,-2.25,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,01/2024,-0.96,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,02/2024,-4.52,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,03/2024,-0.77,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,04/2024,-2.55,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,05/2024,0.11,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,06/2024,6.86,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,07/2024,4.76,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,08/2024,0.17,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,09/2024,5.84,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,10/2024,0.65,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,11/2024,3.22,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,12/2024,-2.15,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,01/2025,1.89,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,02/2025,-2.90,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,03/2025,4.68,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,04/2025,4.29,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,05/2025,-2.21,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,06/2025,3.14,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,07/2025,2.88,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,08/2025,-1.33,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,09/2025,-0.12,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,10/2025,3.69,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,11/2025,4.17,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,12/2025,-2.87,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,01/2026,6.47,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,02/2026,0.31,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,03/2026,1.96,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,04/2026,-2.41,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,05/2026,2.82,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,06/2026,6.38,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,07/2026,6.59,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F003,Cedar Global Macro,Macro,08/2026,2.07,Monthly,5,0,200,2000,Discretionary rates and FX; reports returns in percentage points.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-03-31,0.0121,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-04-30,-0.0138,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-05-31,0.0148,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-06-30,-0.0230,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-07-31,0.0190,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-08-31,-0.0033,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-09-30,-0.0127,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-10-31,0.0356,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-11-30,0.0195,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2022-12-31,-0.0138,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-01-31,0.0275,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-02-28,0.0069,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-03-31,0.0203,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-04-30,0.0158,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-05-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-06-30,0.0247,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-07-31,0.0059,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-08-31,0.0140,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-09-30,-0.0115,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-10-31,-0.0011,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-11-30,0.0321,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2023-12-31,0.0181,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-01-31,0.0235,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-03-31,0.0057,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-04-30,-0.0105,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-05-31,0.0203,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-06-30,0.0116,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-07-31,0.0115,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-08-31,-0.0030,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-09-30,0.0073,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-10-31,0.0159,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-11-30,0.0152,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2024-12-31,0.0104,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-01-31,0.0127,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-02-28,0.0078,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-03-31,-0.0030,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-04-30,0.0035,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-05-31,0.0219,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-06-30,0.0247,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-07-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-08-31,0.0105,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-09-30,0.0220,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-10-31,0.0137,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-11-30,0.0053,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2025-12-31,0.0066,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-01-31,0.0062,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-02-28,0.0087,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-03-31,-0.0222,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-04-30,0.0102,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-05-31,0.0182,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-06-30,-0.0157,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-07-31,0.0218,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F004,Pinnacle Multi-Strategy,Multi-strategy,2026-08-31,0.0043,quarterly,90,12,175,2000,Pod-based platform; pass-through expenses not included in the fee.
+F005,Summit Event Driven,Event-driven,2021-09,0.0039,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2021-10,0.0433,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2021-11,-0.0002,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2021-12,0.0355,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-01,-0.0157,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-02,0.0150,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-03,0.0139,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-04,-0.0240,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-05,0.0260,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-06,-0.0551,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-07,0.0216,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-08,0.0006,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-09,-0.0256,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-10,0.0116,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-11,0.0374,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2022-12,-0.0364,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-01,0.0317,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-02,-0.0057,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-03,0.0249,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-04,0.0111,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-05,0.0104,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-06,0.0432,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-07,0.0188,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-08,-0.0298,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-09,0.0027,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-10,-0.0160,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-11,0.0509,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2023-12,0.0177,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-01,-0.0042,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-02,0.0343,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-03,0.0190,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-04,-0.0156,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-05,0.0200,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-06,0.0230,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-07,0.0248,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-08,0.0202,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-09,0.0314,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-10,0.0022,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-11,0.0016,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2024-12,-0.0137,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-01,0.0049,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-02,0.0074,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-03,-0.0052,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-04,0.0034,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-05,0.0191,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-06,0.0102,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-07,0.0137,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-08,0.0109,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-09,0.0297,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-10,-0.0023,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-11,-0.0048,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2025-12,-0.0050,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2026-01,-0.0017,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2026-02,0.0059,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2026-03,-0.0255,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2026-04,0.0302,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2026-05,0.0094,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2026-06,-0.0013,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2026-07,0.0066,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F005,Summit Event Driven,Event-driven,2026-08,0.0097,Semi-Annual,90,24,150,2000,Merger arbitrage and special situations; 24-month hard lockup.
+F006,Atlas Systematic,Quant,Sep 2021,0.0034,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Oct 2021,0.0064,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Nov 2021,-0.0125,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Dec 2021,-0.0222,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jan 2022,0.0250,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Feb 2022,0.0295,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Mar 2022,0.0433,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Apr 2022,0.0511,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,May 2022,0.0059,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jun 2022,-0.0039,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jul 2022,0.0183,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Aug 2022,-0.0241,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Sep 2022,0.0225,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Oct 2022,0.0330,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Nov 2022,-0.0452,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Dec 2022,0.0383,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jan 2023,0.0328,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Feb 2023,0.0146,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Mar 2023,0.0180,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Apr 2023,-0.0250,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,May 2023,0.0276,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jun 2023,0.0388,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jul 2023,-0.0068,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Aug 2023,-0.0089,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Sep 2023,0.0043,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Oct 2023,-0.0079,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Nov 2023,n/a,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Dec 2023,-0.0103,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jan 2024,0.0415,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Feb 2024,0.0298,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Mar 2024,0.0386,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Apr 2024,0.0026,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,May 2024,0.0371,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jun 2024,0.0250,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jul 2024,-0.0319,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Aug 2024,-0.0247,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Sep 2024,-0.0084,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Oct 2024,-0.0564,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Nov 2024,-0.0176,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Dec 2024,0.0701,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jan 2025,-0.0128,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Feb 2025,0.0079,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Mar 2025,-0.0392,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Apr 2025,-0.0503,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,May 2025,-0.0115,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jun 2025,-0.0133,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jul 2025,0.0054,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Aug 2025,0.0108,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Sep 2025,0.0317,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Oct 2025,-0.0128,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Nov 2025,0.0044,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Dec 2025,-0.0282,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jan 2026,-0.0176,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Feb 2026,0.0069,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Mar 2026,0.0328,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Apr 2026,0.0237,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,May 2026,-0.0413,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jun 2026,-0.0076,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Jul 2026,0.0415,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F006,Atlas Systematic,Quant,Aug 2026,0.0465,monthly,15,0,100,1750,Systematic multi-asset trend and carry.
+F007,Beacon Steady Income,Credit,2021-09,0.0102,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2021-10,0.0087,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2021-11,0.0075,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2021-12,0.0102,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-01,0.0084,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-02,0.0085,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-03,0.0096,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-04,0.0075,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-05,0.0099,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-06,0.0062,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-07,0.0095,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-08,0.0094,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-09,0.0079,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-10,0.0078,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-11,0.0063,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2022-12,0.0095,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-01,0.0077,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-02,0.0079,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-03,0.0079,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-04,0.0077,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-05,0.0078,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-06,0.0074,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-07,0.0074,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-08,0.0081,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-09,0.0074,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-10,0.0076,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-11,0.0098,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2023-12,0.0095,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-01,0.0072,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-02,0.0089,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-03,0.0094,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-04,0.0071,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-05,0.0083,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-06,0.0085,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-07,0.0077,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-08,0.0077,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-09,0.0084,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-10,0.0084,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-11,0.0072,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2024-12,0.0083,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-01,0.0087,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-02,0.0081,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-03,0.0083,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-04,0.0092,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-05,0.0098,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-06,0.0078,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-07,0.0095,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-08,0.0074,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-09,0.0093,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-10,0.0111,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-11,0.0072,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2025-12,0.0082,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2026-01,0.0087,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2026-02,0.0080,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2026-03,0.0099,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2026-04,0.0070,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2026-05,0.0109,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2026-06,0.0086,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2026-07,0.0064,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F007,Beacon Steady Income,Credit,2026-08,0.0063,monthly,30,0,100,2000,No down month since inception. Returns calculated by the manager's affiliated administrator; auditor is a two-partner local firm.
+F008,Juniper Emerging Leaders,Equity L/S,2025-10,0.0318,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2025-11,-0.0154,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2025-12,0.0108,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2026-01,0.0010,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2026-02,0.0183,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2026-03,-0.0484,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2026-04,0.0140,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2026-05,0.0083,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2026-06,0.0014,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2026-07,0.0217,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F008,Juniper Emerging Leaders,Equity L/S,2026-08,0.0079,monthly,30,0,150,2000,Launched October 2025; spun out of a large long-only manager.
+F009,Vector Digital Assets,Crypto,2022-03,-0.2462,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-04,0.1876,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-05,-0.3926,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-06,-0.4500,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-07,-0.0369,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-08,-0.2252,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-09,-0.0818,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-10,0.1119,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-11,-0.2359,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2022-12,-0.1674,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-01,0.1271,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-02,0.2150,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-03,0.0205,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-04,0.0252,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-05,0.1862,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-06,0.0453,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-07,0.0068,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-08,0.0384,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-13,0.0282,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-10,-0.0844,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-11,0.2219,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2023-12,0.2725,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-01,0.1100,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-02,0.1760,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-03,0.62,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-04,-0.1592,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-05,0.2499,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-06,0.0805,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-07,-0.0146,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-08,-0.0226,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-09,-0.0146,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-10,-0.0543,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-11,0.2234,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2024-12,-0.0193,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-01,0.0831,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-02,0.0906,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-03,-0.0710,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-04,-0.0283,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-05,-0.0225,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-06,0.0223,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-07,0.0228,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-08,0.1480,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-09,-0.0360,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-10,-0.0893,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-11,0.1734,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2025-12,0.0354,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2026-01,0.0615,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2026-02,-0.0729,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2026-03,-0.0059,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2026-04,0.1218,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2026-05,0.1491,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2026-06,-0.1746,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2026-07,0.0779,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.
+F009,Vector Digital Assets,Crypto,2026-08,0.0515,monthly,1,0,200,20%,Liquid tokens and basis trades; custody with a single exchange.

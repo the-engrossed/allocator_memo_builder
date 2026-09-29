@@ -33,7 +33,7 @@ def upsert_mandate(
     Replaying an identical payload is a no-op and leaves updated_at unchanged.
     """
     _require_analysis(session, analysis_id)
-    values = payload.model_dump()
+    values = payload.model_dump(mode="json")
     now = datetime.now(timezone.utc)
 
     mandate = session.get(Mandate, analysis_id)

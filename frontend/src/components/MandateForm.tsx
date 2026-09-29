@@ -2,11 +2,14 @@ import type { FormEvent, ReactNode } from "react";
 import {
   MANDATE_LIMITS,
   bpsToPercentText,
+  isLiquidityFrequency,
   parseInteger,
   type MandateDraft,
-  type MandateDraftField,
   type MandateFieldErrors,
+  type StrategyRole,
+  type TextDraftField,
 } from "../lib/mandateForm";
+import { LIQUIDITY_FREQUENCIES, type LiquidityFrequency } from "../types/api";
 import { StrategyChips } from "./StrategyChips";
 
 export type SaveState =
@@ -15,7 +18,12 @@ export type SaveState =
   | { status: "saved"; updatedAt: string }
   | { status: "error"; message: string };
 
-export type TextDraftField = Exclude<MandateDraftField, "preferred_strategies">;
+const LIQUIDITY_LABELS: Record<LiquidityFrequency, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly or more often",
+  semiannual: "Semiannual or more often",
+  annual: "Annual or more often",
+};
 
 interface MandateFormProps {
   draft: MandateDraft;
@@ -25,7 +33,8 @@ interface MandateFormProps {
   saveState: SaveState;
   statusNote: ReactNode;
   onChange: (field: TextDraftField, value: string) => void;
-  onToggleStrategy: (strategy: string) => void;
+  onLiquidityChange: (value: LiquidityFrequency) => void;
+  onToggleStrategy: (strategy: string, role: StrategyRole) => void;
   onSubmit: () => void;
 }
 
@@ -37,6 +46,7 @@ export function MandateForm({
   saveState,
   statusNote,
   onChange,
+  onLiquidityChange,
   onToggleStrategy,
   onSubmit,
 }: MandateFormProps) {
@@ -49,16 +59,53 @@ export function MandateForm({
 
   return (
     <form className="space-y-6" noValidate onSubmit={handleSubmit}>
-      <FormSection title="Return & fees">
+      <FormSection
+        title="Hard screens · Liquidity & fees"
+        description="A fund must pass every hard screen to be ranked. Boundaries are inclusive."
+      >
+        <label className="block">
+          <FieldLabel>Min redemption frequency</FieldLabel>
+          <select
+            value={draft.min_liquidity_frequency}
+            disabled={saving}
+            onChange={(event) => {
+              if (isLiquidityFrequency(event.target.value)) {
+                onLiquidityChange(event.target.value);
+              }
+            }}
+            className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-400 disabled:opacity-60"
+          >
+            {LIQUIDITY_FREQUENCIES.map((frequency) => (
+              <option key={frequency} value={frequency}>
+                {LIQUIDITY_LABELS[frequency]}
+              </option>
+            ))}
+          </select>
+          {errors.min_liquidity_frequency ? (
+            <FieldError>{errors.min_liquidity_frequency}</FieldError>
+          ) : (
+            <p className="mt-1 text-xs text-slate-500">Funds must redeem at least this often.</p>
+          )}
+        </label>
         <TextField
-          label="Target return"
-          suffix="%"
-          inputMode="decimal"
-          value={draft.target_return_pct}
-          error={errors.target_return_pct}
+          label="Max notice period"
+          suffix="days"
+          inputMode="numeric"
+          value={draft.max_notice_days}
+          error={errors.max_notice_days}
           disabled={saving}
-          hint="Annual target, 0–100%. Up to two decimals; 0.01% = 1 bp."
-          onChange={(value) => onChange("target_return_pct", value)}
+          hint="Whole days, 0–3650."
+          onChange={(value) => onChange("max_notice_days", value)}
+        />
+        <TextField
+          label="Max lockup"
+          suffix="months"
+          inputMode="numeric"
+          value={draft.max_lockup_months}
+          error={errors.max_lockup_months}
+          disabled={saving}
+          hint="Whole months, 0–120."
+          onChange={(value) => onChange("max_lockup_months", value)}
         />
         <TextField
           label="Max management fee"
@@ -82,42 +129,83 @@ export function MandateForm({
         />
       </FormSection>
 
-      <FormSection title="Liquidity">
+      <FormSection title="Hard screens · Risk & track record">
         <TextField
-          label="Max notice period"
-          suffix="days"
-          inputMode="numeric"
-          value={draft.max_notice_days}
-          error={errors.max_notice_days}
+          label="Max annualized volatility"
+          suffix="%"
+          inputMode="decimal"
+          value={draft.max_volatility_pct}
+          error={errors.max_volatility_pct}
           disabled={saving}
-          hint="Whole days, 0–3650."
-          onChange={(value) => onChange("max_notice_days", value)}
+          hint="0–100%. Up to two decimals."
+          onChange={(value) => onChange("max_volatility_pct", value)}
         />
         <TextField
-          label="Max lockup"
+          label="Max drawdown"
+          suffix="%"
+          inputMode="decimal"
+          value={draft.max_drawdown_pct}
+          error={errors.max_drawdown_pct}
+          disabled={saving}
+          hint="Peak-to-trough loss tolerance, 0–100%. Up to two decimals."
+          onChange={(value) => onChange("max_drawdown_pct", value)}
+        />
+        <TextField
+          label="Min track record"
           suffix="months"
           inputMode="numeric"
-          value={draft.max_lockup_months}
-          error={errors.max_lockup_months}
+          value={draft.min_track_record_months}
+          error={errors.min_track_record_months}
           disabled={saving}
-          hint="Whole months, 0–120."
-          onChange={(value) => onChange("max_lockup_months", value)}
+          hint="Months of valid return history, 0–360."
+          onChange={(value) => onChange("min_track_record_months", value)}
         />
+        <div className="sm:col-span-3">
+          <FieldLabel>Excluded strategies</FieldLabel>
+          <div className="mt-2">
+            <StrategyChips
+              tone="exclude"
+              options={strategyOptions}
+              selected={draft.excluded_strategies}
+              universe={universeStrategies}
+              disabled={saving}
+              onToggle={(strategy) => onToggleStrategy(strategy, "excluded")}
+            />
+          </div>
+          {errors.excluded_strategies ? (
+            <FieldError>{errors.excluded_strategies}</FieldError>
+          ) : (
+            <p className="mt-1 text-xs text-slate-500">
+              Funds in these strategies are ineligible. Optional.
+            </p>
+          )}
+        </div>
       </FormSection>
 
-      <FormSection title="Strategy">
+      <FormSection
+        title="Shortlist construction"
+        description="Applied to the ranked eligible funds. These never change eligibility or a fund's score."
+      >
         <div className="sm:col-span-3">
           <FieldLabel>Preferred strategies</FieldLabel>
           <div className="mt-2">
             <StrategyChips
+              tone="prefer"
               options={strategyOptions}
               selected={draft.preferred_strategies}
               universe={universeStrategies}
               disabled={saving}
-              onToggle={onToggleStrategy}
+              onToggle={(strategy) => onToggleStrategy(strategy, "preferred")}
             />
           </div>
-          {errors.preferred_strategies && <FieldError>{errors.preferred_strategies}</FieldError>}
+          {errors.preferred_strategies ? (
+            <FieldError>{errors.preferred_strategies}</FieldError>
+          ) : (
+            <p className="mt-1 text-xs text-slate-500">
+              A preference, not a whitelist: preferred strategies fill the shortlist first, then
+              other eligible funds in rank order. Optional.
+            </p>
+          )}
         </div>
         <TextField
           label="Strategy concentration cap"
@@ -129,9 +217,6 @@ export function MandateForm({
           hint="Maximum share of the shortlist per strategy, 0–100%. Up to two decimals."
           onChange={(value) => onChange("strategy_concentration_cap_pct", value)}
         />
-      </FormSection>
-
-      <FormSection title="Shortlist">
         <TextField
           label="Max candidates"
           inputMode="numeric"
@@ -140,6 +225,16 @@ export function MandateForm({
           disabled={saving}
           hint="Whole number, 1–20."
           onChange={(value) => onChange("max_candidates", value)}
+        />
+        <TextField
+          label="Target return"
+          suffix="%"
+          inputMode="decimal"
+          value={draft.target_return_pct}
+          error={errors.target_return_pct}
+          disabled={saving}
+          hint="Reporting reference only; never excludes or reorders a fund. 0.01% = 1 bp."
+          onChange={(value) => onChange("target_return_pct", value)}
         />
       </FormSection>
 
@@ -209,10 +304,19 @@ function bpsHint(text: string, limits: { min: number; max: number }): string {
   return parsed.ok ? `${range} = ${bpsToPercentText(parsed.value)}%` : range;
 }
 
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
+function FormSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
   return (
     <section className="rounded-xl border border-slate-800 bg-slate-900 p-4">
       <h2 className="text-sm font-semibold text-slate-100">{title}</h2>
+      {description && <p className="mt-1 text-xs text-slate-400">{description}</p>}
       <div className="mt-4 grid gap-4 sm:grid-cols-3">{children}</div>
     </section>
   );

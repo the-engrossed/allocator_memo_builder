@@ -6,6 +6,7 @@ import io
 import re
 import uuid
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -13,7 +14,7 @@ from statistics import median
 
 from sqlalchemy.orm import Session
 
-from app.domain.enums import ReturnInputUnit
+from app.domain.enums import LiquidityFrequency, ReturnInputUnit
 from app.domain.models import Analysis, ReturnObservation, SourceRow, ValidationIssue as IssueRow
 from app.domain.schemas import AnalysisResponse, FundSummaryOut, ValidationIssueOut
 
@@ -76,6 +77,26 @@ METADATA_FIELDS: tuple[str, ...] = (
     "notes",
 )
 
+# Inclusive upper bounds for integer metadata read by the hard screens; they mirror the mandate.
+METADATA_INT_LIMITS: dict[str, int] = {
+    "notice_days": 3650,
+    "lockup_months": 120,
+    "mgmt_fee_bps": 10_000,
+    "perf_fee_bps": 10_000,
+}
+
+_LIQUIDITY_VALUES: dict[str, LiquidityFrequency] = {
+    **{frequency.value: frequency for frequency in LiquidityFrequency},
+    "semi-annual": LiquidityFrequency.SEMIANNUAL,
+}
+
+# A monthly net return beyond +/-50% is a data error that blocks the fund from analysis.
+MAX_ABS_MONTHLY_RETURN = Decimal("0.5")
+
+# Per-fund unit inference on the median absolute bare return (see infer_return_unit).
+PERCENT_MEDIAN_THRESHOLD = Decimal("0.25")
+AMBIGUOUS_MEDIAN_FLOOR = Decimal("0.10")
+
 
 class ParseError(ValueError):
     pass
@@ -112,7 +133,7 @@ class ReturnUnitInference:
     unit: ReturnInputUnit
     median_abs_bare: float | None
     bare_count: int
-    mixed_scale: bool
+    ambiguous: bool
     message: str
 
 
@@ -207,32 +228,60 @@ def parse_return(value: str, bare_unit: ReturnInputUnit) -> tuple[Decimal, Retur
     return magnitude, ReturnInputUnit.DECIMAL
 
 
+def parse_liquidity_frequency(value: str) -> LiquidityFrequency:
+    raw = value.strip()
+    frequency = _LIQUIDITY_VALUES.get(raw.lower())
+    if frequency is None:
+        allowed = ", ".join(item.value for item in LiquidityFrequency)
+        raise ParseError(f"Liquidity frequency {raw!r} is not one of: {allowed}")
+    return frequency
+
+
+def parse_bounded_int(value: str, maximum: int) -> int:
+    raw = value.strip()
+    if not raw:
+        raise ParseError("Value is empty")
+    if not re.fullmatch(r"\d+", raw):
+        raise ParseError(f"{raw!r} is not a non-negative whole number")
+    number = int(raw)
+    if number > maximum:
+        raise ParseError(f"{number} exceeds the maximum of {maximum}")
+    return number
+
+
 def infer_return_unit(bare_values: list[Decimal]) -> ReturnUnitInference:
+    """Classify one fund's bare returns by the median of their absolute values.
+
+    median > 0.25        -> percentage points (a 25% median monthly decimal return is implausible)
+    0.10 <= median <= 0.25 -> decimals, flagged ambiguous
+    median < 0.10        -> decimals
+    """
     if not bare_values:
         return ReturnUnitInference(
             unit=ReturnInputUnit.DECIMAL,
             median_abs_bare=None,
             bare_count=0,
-            mixed_scale=False,
-            message="No bare numeric returns were found; treating unadorned values as decimals.",
+            ambiguous=False,
+            message="No bare numeric returns were found; unadorned values would read as decimals.",
         )
 
     abs_values = [abs(value) for value in bare_values]
-    median_abs = float(median(abs_values))
-    unit = ReturnInputUnit.PERCENT if median_abs > 1.0 else ReturnInputUnit.DECIMAL
-    mixed = any(value <= Decimal("1") for value in abs_values) and any(
-        value > Decimal("1") for value in abs_values
-    )
+    median_abs = median(abs_values)
+    if median_abs > PERCENT_MEDIAN_THRESHOLD:
+        unit = ReturnInputUnit.PERCENT
+    else:
+        unit = ReturnInputUnit.DECIMAL
+    ambiguous = AMBIGUOUS_MEDIAN_FLOOR <= median_abs <= PERCENT_MEDIAN_THRESHOLD
     unit_label = "percentage points" if unit is ReturnInputUnit.PERCENT else "decimals"
     message = (
-        f"Inferred file-level return unit for bare numeric values as {unit_label} "
+        f"Bare numeric returns read as {unit_label} "
         f"(median absolute value {median_abs:.4g} across {len(abs_values)} values)."
     )
     return ReturnUnitInference(
         unit=unit,
-        median_abs_bare=median_abs,
+        median_abs_bare=float(median_abs),
         bare_count=len(abs_values),
-        mixed_scale=mixed,
+        ambiguous=ambiguous,
         message=message,
     )
 
@@ -268,23 +317,37 @@ def apply_mapping(records: list[SourceRecord], mapping: dict[str, str]) -> list[
     return mapped
 
 
-def collect_bare_return_decimals(rows: list[MappedRow]) -> list[Decimal]:
-    collected: list[Decimal] = []
+def collect_bare_returns_by_fund(rows: list[MappedRow]) -> dict[str | None, list[Decimal]]:
+    """Bare numeric returns (no % suffix) grouped by fund_id; None collects unassigned rows."""
+    collected: dict[str | None, list[Decimal]] = defaultdict(list)
     for row in rows:
         raw = row.values.get("net_return", "").strip()
         if not raw or raw.endswith("%"):
             continue
         try:
-            collected.append(Decimal(raw.replace(",", "")))
+            value = Decimal(raw.replace(",", ""))
         except InvalidOperation:
             continue
-    return collected
+        collected[_fund_key(row)].append(value)
+    return dict(collected)
 
 
-def parse_mapped_rows(rows: list[MappedRow], bare_unit: ReturnInputUnit) -> list[ParsedRow]:
+def infer_return_units(rows: list[MappedRow]) -> dict[str | None, ReturnUnitInference]:
+    """Infer decimal vs percentage-point units separately for each fund's bare returns."""
+    return {
+        fund_id: infer_return_unit(values)
+        for fund_id, values in collect_bare_returns_by_fund(rows).items()
+    }
+
+
+def parse_mapped_rows(
+    rows: list[MappedRow], unit_by_fund: Mapping[str | None, ReturnInputUnit]
+) -> list[ParsedRow]:
+    """Parse rows, reading each bare return with its own fund's unit (decimal if unknown)."""
     parsed: list[ParsedRow] = []
     for row in rows:
-        fund_id = row.values.get("fund_id", "").strip() or None
+        fund_id = _fund_key(row)
+        bare_unit = unit_by_fund.get(fund_id, ReturnInputUnit.DECIMAL)
         period: date | None = None
         period_error: str | None = None
         net_return: Decimal | None = None
@@ -319,6 +382,10 @@ def parse_mapped_rows(rows: list[MappedRow], bare_unit: ReturnInputUnit) -> list
     return parsed
 
 
+def _fund_key(row: MappedRow) -> str | None:
+    return row.values.get("fund_id", "").strip() or None
+
+
 def _month_start(year: int, month: int) -> date:
     if month < 1 or month > 12:
         raise ParseError(f"Invalid month: {month}")
@@ -342,16 +409,18 @@ def create_analysis(db: Session, *, filename: str, content: bytes) -> Analysis:
     headers, records = read_csv_records(content)
     mapping, missing = map_columns(headers)
     mapped_rows = apply_mapping(records, mapping) if not missing else []
-    unit_inference = None
+    unit_inferences: dict[str | None, ReturnUnitInference] = {}
     parsed_rows: list[ParsedRow] = []
     if not missing:
-        unit_inference = infer_return_unit(collect_bare_return_decimals(mapped_rows))
-        parsed_rows = parse_mapped_rows(mapped_rows, unit_inference.unit)
+        unit_inferences = infer_return_units(mapped_rows)
+        parsed_rows = parse_mapped_rows(
+            mapped_rows, {fund_id: item.unit for fund_id, item in unit_inferences.items()}
+        )
 
     issues = validate_upload(
         missing_columns=missing,
         parsed_rows=parsed_rows,
-        unit_inference=unit_inference,
+        unit_inferences=unit_inferences,
     )
     observations = [] if missing else select_observations(parsed_rows)
     status = derive_status(issues, len(observations))

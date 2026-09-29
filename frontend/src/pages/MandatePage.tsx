@@ -1,20 +1,16 @@
 import { useEffect, useState } from "react";
 import { getMandate, putMandate } from "../api/client";
-import {
-  MandateForm,
-  Timestamp,
-  type SaveState,
-  type TextDraftField,
-} from "../components/MandateForm";
+import { MandateForm, Timestamp, type SaveState } from "../components/MandateForm";
 import {
   MANDATE_DEFAULTS,
   draftFromMandate,
   draftToPayload,
   draftsEqual,
   strategyOptions,
-  toggleStrategy,
+  toggleStrategyRole,
   type MandateDraft,
   type MandateFieldErrors,
+  type TextDraftField,
 } from "../lib/mandateForm";
 import type { AnalysisResponse, MandateResponse } from "../types/api";
 
@@ -169,20 +165,16 @@ function MandateEditor({
       draft={draft}
       errors={errors}
       strategyOptions={strategyOptions(
-        persisted?.preferred_strategies ?? [],
+        [...(persisted?.preferred_strategies ?? []), ...(persisted?.excluded_strategies ?? [])],
         universeStrategies,
-        draft.preferred_strategies,
+        [...draft.preferred_strategies, ...draft.excluded_strategies],
       )}
       universeStrategies={universeStrategies}
       saveState={saveState}
       statusNote={statusNote}
       onChange={(field: TextDraftField, value: string) => updateDraft({ ...draft, [field]: value })}
-      onToggleStrategy={(strategy) =>
-        updateDraft({
-          ...draft,
-          preferred_strategies: toggleStrategy(draft.preferred_strategies, strategy),
-        })
-      }
+      onLiquidityChange={(value) => updateDraft({ ...draft, min_liquidity_frequency: value })}
+      onToggleStrategy={(strategy, role) => updateDraft(toggleStrategyRole(draft, strategy, role))}
       onSubmit={() => void save()}
     />
   );

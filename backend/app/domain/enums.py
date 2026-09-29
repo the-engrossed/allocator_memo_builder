@@ -23,8 +23,20 @@ class IssueCode(StrEnum):
     SHORT_HISTORY = "SHORT_HISTORY"
     CONFLICTING_METADATA = "CONFLICTING_METADATA"
     RETURN_UNIT_INFERRED = "RETURN_UNIT_INFERRED"
+    RETURN_OUT_OF_RANGE = "RETURN_OUT_OF_RANGE"
+    INVALID_METADATA = "INVALID_METADATA"
+    SMOOTH_RETURNS = "SMOOTH_RETURNS"
 
 
 class ReturnInputUnit(StrEnum):
     DECIMAL = "decimal"
     PERCENT = "percent"
+
+
+class LiquidityFrequency(StrEnum):
+    """Redemption frequency, declared from most to least frequent."""
+
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    SEMIANNUAL = "semiannual"
+    ANNUAL = "annual"

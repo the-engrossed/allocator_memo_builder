@@ -4,30 +4,36 @@ from pathlib import Path
 
 import pytest
 
-from app.domain.enums import IssueCode, ReturnInputUnit
+from app.domain.enums import IssueCode, IssueSeverity, ReturnInputUnit
+from app.seed.sample_data import write_csv
 from app.services.ingestion import (
     apply_mapping,
-    collect_bare_return_decimals,
     infer_return_unit,
+    infer_return_units,
     map_columns,
     parse_mapped_rows,
     parse_period,
     parse_return,
     read_csv_records,
 )
-from app.services.validation import derive_status, select_observations, validate_upload
+from app.services.validation import (
+    derive_status,
+    is_analysis_blocked,
+    select_observations,
+    validate_upload,
+)
 
 
 def _pipeline(csv_text: str):
     headers, records = read_csv_records(csv_text.encode("utf-8"))
     mapping, missing = map_columns(headers)
     if missing:
-        issues = validate_upload(missing_columns=missing, parsed_rows=[], unit_inference=None)
+        issues = validate_upload(missing_columns=missing, parsed_rows=[], unit_inferences={})
         return mapping, missing, [], [], issues
     mapped = apply_mapping(records, mapping)
-    inference = infer_return_unit(collect_bare_return_decimals(mapped))
-    parsed = parse_mapped_rows(mapped, inference.unit)
-    issues = validate_upload(missing_columns=[], parsed_rows=parsed, unit_inference=inference)
+    inferences = infer_return_units(mapped)
+    parsed = parse_mapped_rows(mapped, {fund: item.unit for fund, item in inferences.items()})
+    issues = validate_upload(missing_columns=[], parsed_rows=parsed, unit_inferences=inferences)
     observations = select_observations(parsed)
     return mapping, missing, parsed, observations, issues
 
@@ -125,16 +131,16 @@ def test_whitespace_insensitive_headers() -> None:
     assert mapping["period"] == "month"
 
 
-def test_file_level_percent_inference() -> None:
+def test_percent_inference() -> None:
     inference = infer_return_unit([Decimal("1.2"), Decimal("1.5"), Decimal("0.8")])
     assert inference.unit is ReturnInputUnit.PERCENT
-    assert inference.mixed_scale is True
+    assert inference.ambiguous is False
 
 
-def test_file_level_decimal_inference() -> None:
+def test_decimal_inference() -> None:
     inference = infer_return_unit([Decimal("0.012"), Decimal("0.01"), Decimal("-0.02")])
     assert inference.unit is ReturnInputUnit.DECIMAL
-    assert inference.mixed_scale is False
+    assert inference.ambiguous is False
 
 
 def test_invalid_rows_never_become_observations() -> None:
@@ -165,20 +171,70 @@ def test_missing_column_short_circuits() -> None:
     assert derive_status(issues, 0).value == "invalid"
 
 
-def test_sample_universe_emits_expected_issue_codes() -> None:
+def test_sample_universe_plants_expected_issues() -> None:
     sample = _sample_csv_path()
     if sample is None:
         pytest.skip("sample_fund_universe.csv is not available")
-    _, _, _, _, issues = _pipeline(sample.read_text())
-    codes = {issue.code for issue in issues}
-    assert IssueCode.RETURN_UNIT_INFERRED in codes
-    assert IssueCode.INVALID_PERIOD in codes
-    assert IssueCode.INVALID_RETURN in codes
-    assert IssueCode.DUPLICATE_PERIOD in codes
-    assert IssueCode.MISSING_MONTHS in codes
-    assert IssueCode.SHORT_HISTORY in codes
-    assert IssueCode.CONFLICTING_METADATA in codes
-    assert IssueCode.MISSING_COLUMN not in codes
+    _, missing, _, observations, issues = _pipeline(sample.read_text())
+    assert missing == []
+
+    by_code: dict[IssueCode, set[str | None]] = {}
+    for issue in issues:
+        if issue.severity is not IssueSeverity.INFO:
+            by_code.setdefault(issue.code, set()).add(issue.fund_id)
+    assert by_code == {
+        IssueCode.CONFLICTING_METADATA: {"F001"},
+        IssueCode.MISSING_MONTHS: {"F004", "F006", "F009"},
+        IssueCode.INVALID_RETURN: {"F006"},
+        IssueCode.SMOOTH_RETURNS: {"F007"},
+        IssueCode.SHORT_HISTORY: {"F008"},
+        IssueCode.INVALID_PERIOD: {"F009"},
+        IssueCode.RETURN_OUT_OF_RANGE: {"F009"},
+        IssueCode.INVALID_METADATA: {"F009"},
+    }
+    metadata = next(i for i in issues if i.code is IssueCode.INVALID_METADATA)
+    assert metadata.field == "perf_fee_bps"
+
+    counts: dict[str, int] = {}
+    last_period: dict[str, object] = {}
+    for row in observations:
+        counts[row.fund_id] = counts.get(row.fund_id, 0) + 1
+        last_period[row.fund_id] = max(last_period.get(row.fund_id, row.period), row.period)
+    assert len(counts) == 9
+    assert set(last_period.values()) == {date(2026, 8, 1)}
+    assert counts["F008"] == 11
+    assert all(36 <= count <= 60 for fund, count in counts.items() if fund != "F008")
+
+    blocked = {fund for fund in counts if is_analysis_blocked(fund, issues)}
+    assert blocked == {"F009"}
+    out_of_range = next(i for i in issues if i.code is IssueCode.RETURN_OUT_OF_RANGE)
+    assert out_of_range.row_numbers[0] in {row.row_number for row in observations}
+    assert counts["F009"] == 53
+
+
+def test_sample_csv_matches_generator(tmp_path: Path) -> None:
+    sample = _sample_csv_path()
+    if sample is None:
+        pytest.skip("sample_fund_universe.csv is not available")
+    generated = tmp_path / "generated.csv"
+    write_csv(generated)
+    assert generated.read_text() == sample.read_text(), (
+        "Regenerate with: python -m app.seed.sample_data"
+    )
+
+
+def test_sample_universe_infers_units_per_fund() -> None:
+    sample = _sample_csv_path()
+    if sample is None:
+        pytest.skip("sample_fund_universe.csv is not available")
+    headers, records = read_csv_records(sample.read_bytes())
+    mapping, _ = map_columns(headers)
+    inferences = infer_return_units(apply_mapping(records, mapping))
+    assert inferences["F003"].unit is ReturnInputUnit.PERCENT
+    assert "F002" not in inferences
+    assert all(
+        item.unit is ReturnInputUnit.DECIMAL for fund, item in inferences.items() if fund != "F003"
+    )
 
 
 def _sample_csv_path() -> Path | None:

@@ -16,6 +16,13 @@ docker compose up --build
 3. Open [http://localhost:5173](http://localhost:5173).
 4. Upload `sample_data/sample_fund_universe.csv`.
 
+The sample universe is synthetic and generated deterministically. Its planted demo cases are
+documented in `backend/app/seed/sample_data.py`. To regenerate it, run from `backend/`:
+
+```bash
+python -m app.seed.sample_data
+```
+
 The API is at [http://localhost:8000](http://localhost:8000) (`GET /api/health`).
 
 ## Tests

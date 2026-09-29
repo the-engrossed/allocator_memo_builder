@@ -189,6 +189,17 @@ V1 validation must cover:
 - Missing months within a fund’s observed range.
 - Fewer than 12 return observations.
 - Conflicting metadata for a single `fund_id`.
+- Monthly returns with |r| > 0.5 (error; blocks the fund from analysis, like duplicate
+  periods; the row is kept, not dropped).
+- `notice_days`, `lockup_months`, `mgmt_fee_bps`, and `perf_fee_bps` that are not
+  non-negative integers within bounds, and `liquidity_frequency` values outside
+  `monthly | quarterly | semiannual | annual` (error; hard screens read these fields).
+- Implausibly smooth returns (`SMOOTH_RETURNS` warning): no negative month across ≥24
+  observations, or annualized volatility < 1% with ≥12 observations.
+
+Bare numeric returns (no `%` suffix) are interpreted **per fund**, never once for the whole
+file: percentage points when the median |value| > 0.25, otherwise decimals, with a warning
+when the median falls in 0.10–0.25. Values with a `%` suffix are always percentages.
 
 Every issue must be structured with:
 - Severity: `error`, `warning`, or `info`.
@@ -202,16 +213,26 @@ Do not silently drop invalid rows. Preserve raw source inputs and report the iss
 
 ### 9. Deterministic mandate screen and ranking
 
-Hard screens:
-- Required liquidity.
-- Maximum annualized volatility.
-- Maximum drawdown.
-- Minimum track-record months.
-- Excluded strategies.
+Every mandate input has exactly one role. See `DECISIONS.md` ("Mandate inputs split into
+hard screens, ranking, and shortlist construction").
 
-Only eligible funds can be ranked.
+Hard screens (pass/fail, inclusive boundaries; a fund must pass all to be ranked):
+- Redemption frequency at least as frequent as `min_liquidity_frequency`
+  (monthly < quarterly < semiannual < annual).
+- `notice_days` ≤ `max_notice_days`.
+- `lockup_months` ≤ `max_lockup_months`.
+- `mgmt_fee_bps` ≤ `max_mgmt_fee_bps`.
+- `perf_fee_bps` ≤ `max_perf_fee_bps`.
+- Annualized volatility ≤ `max_volatility_bps`.
+- Maximum drawdown magnitude ≤ `max_drawdown_bps`.
+- Months of valid return history ≥ `min_track_record_months`.
+- Strategy not in `excluded_strategies`.
 
-V1 score weights must be explicit and centralized:
+A screen whose input field is missing or invalid fails as "unverifiable"; never substitute
+a default for fund data.
+
+Only eligible funds can be ranked. V1 score weights must be explicit and centralized, and no
+mandate field may change them:
 
 ```text
 Sharpe: 45%
@@ -220,7 +241,18 @@ Drawdown resilience: 20%
 Low benchmark correlation: 10%
 ```
 
-The UI must show the score, components, weights, and exclusion reasons.
+Shortlist construction runs on the ranked list and never changes eligibility or score:
+- `max_candidates` caps the shortlist size.
+- `strategy_concentration_cap_bps` caps funds per strategy at
+  `max(1, floor(max_candidates × cap / 10000))`.
+- `preferred_strategies` is a preference, not a whitelist: fill first with eligible funds in
+  preferred strategies (rank order, within the cap), then with the remaining eligible funds in
+  rank order. An empty list means pure rank order.
+- `target_return_bps` is a reporting reference only: record whether each shortlisted fund's
+  annualized return meets it.
+
+The UI must show the score, components, weights, exclusion reasons, and why each shortlisted
+fund was included.
 
 ### 10. Thin routes; business logic lives in services
 

@@ -114,7 +114,18 @@ class Mandate(Base):
         ),
         CheckConstraint("max_candidates BETWEEN 1 AND 20", name="ck_mandates_max_candidates"),
         CheckConstraint(
-            "cardinality(preferred_strategies) > 0", name="ck_mandates_preferred_strategies"
+            "min_liquidity_frequency IN ('monthly', 'quarterly', 'semiannual', 'annual')",
+            name="ck_mandates_min_liquidity_frequency",
+        ),
+        CheckConstraint(
+            "max_volatility_bps BETWEEN 0 AND 10000", name="ck_mandates_max_volatility_bps"
+        ),
+        CheckConstraint(
+            "max_drawdown_bps BETWEEN 0 AND 10000", name="ck_mandates_max_drawdown_bps"
+        ),
+        CheckConstraint(
+            "min_track_record_months BETWEEN 0 AND 360",
+            name="ck_mandates_min_track_record_months",
         ),
     )
 
@@ -126,7 +137,12 @@ class Mandate(Base):
     max_perf_fee_bps: Mapped[int] = mapped_column(Integer, nullable=False)
     max_notice_days: Mapped[int] = mapped_column(Integer, nullable=False)
     max_lockup_months: Mapped[int] = mapped_column(Integer, nullable=False)
+    min_liquidity_frequency: Mapped[str] = mapped_column(String(16), nullable=False)
+    max_volatility_bps: Mapped[int] = mapped_column(Integer, nullable=False)
+    max_drawdown_bps: Mapped[int] = mapped_column(Integer, nullable=False)
+    min_track_record_months: Mapped[int] = mapped_column(Integer, nullable=False)
     preferred_strategies: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
+    excluded_strategies: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
     strategy_concentration_cap_bps: Mapped[int] = mapped_column(Integer, nullable=False)
     max_candidates: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

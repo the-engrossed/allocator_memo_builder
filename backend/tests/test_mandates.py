@@ -17,7 +17,12 @@ VALID_MANDATE: dict = {
     "max_perf_fee_bps": 2000,
     "max_notice_days": 90,
     "max_lockup_months": 12,
+    "min_liquidity_frequency": "quarterly",
+    "max_volatility_bps": 1500,
+    "max_drawdown_bps": 2000,
+    "min_track_record_months": 36,
     "preferred_strategies": ["Macro", "Equity L/S", "Credit"],
+    "excluded_strategies": ["Crypto"],
     "strategy_concentration_cap_bps": 4000,
     "max_candidates": 5,
 }
@@ -27,8 +32,11 @@ UPPER_BOUNDS = {
     "max_mgmt_fee_bps": 10_000,
     "max_perf_fee_bps": 10_000,
     "strategy_concentration_cap_bps": 10_000,
+    "max_volatility_bps": 10_000,
+    "max_drawdown_bps": 10_000,
     "max_notice_days": 3650,
     "max_lockup_months": 120,
+    "min_track_record_months": 360,
     "max_candidates": 20,
 }
 
@@ -45,7 +53,7 @@ def _url(analysis_id: uuid.UUID) -> str:
 
 
 def test_valid_payload_is_accepted() -> None:
-    assert MandateIn.model_validate(VALID_MANDATE).model_dump() == VALID_MANDATE
+    assert MandateIn.model_validate(VALID_MANDATE).model_dump(mode="json") == VALID_MANDATE
 
 
 @pytest.mark.parametrize("field", sorted(UPPER_BOUNDS))
@@ -82,17 +90,44 @@ def test_unknown_fields_are_rejected() -> None:
         MandateIn.model_validate(_mandate(target_return=1000))
 
 
-def test_strategies_are_trimmed_and_deduplicated_in_order() -> None:
+@pytest.mark.parametrize("field", ["preferred_strategies", "excluded_strategies"])
+def test_strategies_are_trimmed_and_deduplicated_in_order(field: str) -> None:
+    other = "excluded_strategies" if field == "preferred_strategies" else "preferred_strategies"
     mandate = MandateIn.model_validate(
-        _mandate(preferred_strategies=["  Credit ", "Macro", "Credit", "Macro  "])
+        _mandate(**{field: ["  Credit ", "Macro", "Credit", "Macro  "], other: []})
     )
-    assert mandate.preferred_strategies == ["Credit", "Macro"]
+    assert getattr(mandate, field) == ["Credit", "Macro"]
 
 
-@pytest.mark.parametrize("strategies", [[], [""], ["   "], ["Macro", " "], [1], "Macro"])
-def test_invalid_strategy_lists_are_rejected(strategies: object) -> None:
+@pytest.mark.parametrize("field", ["preferred_strategies", "excluded_strategies"])
+def test_strategy_lists_may_be_empty(field: str) -> None:
+    assert getattr(MandateIn.model_validate(_mandate(**{field: []})), field) == []
+
+
+@pytest.mark.parametrize("field", ["preferred_strategies", "excluded_strategies"])
+@pytest.mark.parametrize("strategies", [[""], ["   "], ["Macro", " "], [1], "Macro", None])
+def test_invalid_strategy_lists_are_rejected(field: str, strategies: object) -> None:
     with pytest.raises(ValidationError):
-        MandateIn.model_validate(_mandate(preferred_strategies=strategies))
+        MandateIn.model_validate(_mandate(**{field: strategies}))
+
+
+def test_strategy_cannot_be_preferred_and_excluded() -> None:
+    with pytest.raises(ValidationError, match="both preferred and excluded: Credit"):
+        MandateIn.model_validate(
+            _mandate(preferred_strategies=["Macro", " Credit"], excluded_strategies=["Credit "])
+        )
+
+
+@pytest.mark.parametrize("value", ["monthly", "quarterly", "semiannual", "annual"])
+def test_liquidity_frequencies_are_accepted(value: str) -> None:
+    mandate = MandateIn.model_validate(_mandate(min_liquidity_frequency=value))
+    assert mandate.min_liquidity_frequency == value
+
+
+@pytest.mark.parametrize("value", ["Quarterly", "semi-annual", "weekly", "", 3, None])
+def test_unknown_liquidity_frequency_is_rejected(value: object) -> None:
+    with pytest.raises(ValidationError):
+        MandateIn.model_validate(_mandate(min_liquidity_frequency=value))
 
 
 # --- API against Postgres ---------------------------------------------------------------
@@ -149,11 +184,26 @@ def test_identical_put_is_idempotent(
 
 def test_put_normalizes_strategies(client: TestClient, analysis_id: uuid.UUID) -> None:
     response = client.put(
-        _url(analysis_id), json=_mandate(preferred_strategies=[" Macro", "Macro", "Credit "])
+        _url(analysis_id),
+        json=_mandate(
+            preferred_strategies=[" Macro", "Macro", "Credit "],
+            excluded_strategies=["Crypto ", "Crypto"],
+        ),
     )
 
     assert response.status_code == 201
     assert response.json()["preferred_strategies"] == ["Macro", "Credit"]
+    assert response.json()["excluded_strategies"] == ["Crypto"]
+
+
+def test_put_accepts_empty_preferences(client: TestClient, analysis_id: uuid.UUID) -> None:
+    payload = _mandate(preferred_strategies=[], excluded_strategies=[])
+
+    response = client.put(_url(analysis_id), json=payload)
+
+    assert response.status_code == 201
+    assert response.json()["preferred_strategies"] == []
+    assert client.get(_url(analysis_id)).json()["excluded_strategies"] == []
 
 
 @pytest.mark.parametrize(
@@ -164,8 +214,10 @@ def test_put_normalizes_strategies(client: TestClient, analysis_id: uuid.UUID) -
         _mandate(max_notice_days=-1),
         _mandate(max_mgmt_fee_bps=10_001),
         _mandate(target_return_bps=10.5),
-        _mandate(preferred_strategies=[]),
         _mandate(preferred_strategies=["  "]),
+        _mandate(min_liquidity_frequency="weekly"),
+        _mandate(max_drawdown_bps=10_001),
+        _mandate(excluded_strategies=["Macro"]),
         _mandate(unexpected=1),
         {"target_return_bps": 1000},
     ],
@@ -221,7 +273,19 @@ def test_malformed_analysis_id_returns_422(client: TestClient) -> None:
     assert client.put("/api/analyses/not-a-uuid/mandate", json=VALID_MANDATE).status_code == 422
 
 
-def test_database_enforces_bounds(db_session: Session, analysis_id: uuid.UUID) -> None:
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"max_candidates": 0},
+        {"min_liquidity_frequency": "weekly"},
+        {"max_volatility_bps": -1},
+        {"max_drawdown_bps": 10_001},
+        {"min_track_record_months": 361},
+    ],
+)
+def test_database_enforces_bounds(
+    db_session: Session, analysis_id: uuid.UUID, overrides: dict
+) -> None:
     now = datetime.now(timezone.utc)
     nested = db_session.begin_nested()
     db_session.add(
@@ -229,9 +293,24 @@ def test_database_enforces_bounds(db_session: Session, analysis_id: uuid.UUID) -
             analysis_id=analysis_id,
             created_at=now,
             updated_at=now,
-            **_mandate(max_candidates=0),
+            **_mandate(**overrides),
         )
     )
     with pytest.raises(IntegrityError):
         db_session.flush()
     nested.rollback()
+
+
+def test_database_allows_empty_preferred_strategies(
+    db_session: Session, analysis_id: uuid.UUID
+) -> None:
+    now = datetime.now(timezone.utc)
+    db_session.add(
+        Mandate(
+            analysis_id=analysis_id,
+            created_at=now,
+            updated_at=now,
+            **_mandate(preferred_strategies=[], excluded_strategies=[]),
+        )
+    )
+    db_session.flush()

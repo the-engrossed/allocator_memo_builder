@@ -40,6 +40,10 @@ export interface AnalysisResponse {
   funds: FundSummary[];
 }
 
+/** Ordered from most to least frequent redemption. */
+export const LIQUIDITY_FREQUENCIES = ["monthly", "quarterly", "semiannual", "annual"] as const;
+export type LiquidityFrequency = (typeof LIQUIDITY_FREQUENCIES)[number];
+
 /** Full-replacement mandate body. Rates and percentages are integer basis points. */
 export interface MandatePayload {
   target_return_bps: number;
@@ -47,7 +51,12 @@ export interface MandatePayload {
   max_perf_fee_bps: number;
   max_notice_days: number;
   max_lockup_months: number;
+  min_liquidity_frequency: LiquidityFrequency;
+  max_volatility_bps: number;
+  max_drawdown_bps: number;
+  min_track_record_months: number;
   preferred_strategies: string[];
+  excluded_strategies: string[];
   strategy_concentration_cap_bps: number;
   max_candidates: number;
 }

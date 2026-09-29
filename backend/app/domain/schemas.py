@@ -2,9 +2,17 @@ from datetime import date, datetime
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictInt,
+    StrictStr,
+    field_validator,
+    model_validator,
+)
 
-from app.domain.enums import AnalysisStatus, IssueSeverity
+from app.domain.enums import AnalysisStatus, IssueSeverity, LiquidityFrequency
 
 
 class ValidationIssueOut(BaseModel):
@@ -51,7 +59,12 @@ class MandateFields(BaseModel):
     max_perf_fee_bps: BasisPoints
     max_notice_days: Annotated[StrictInt, Field(ge=0, le=3650)]
     max_lockup_months: Annotated[StrictInt, Field(ge=0, le=120)]
-    preferred_strategies: list[StrictStr] = Field(min_length=1)
+    min_liquidity_frequency: LiquidityFrequency
+    max_volatility_bps: BasisPoints
+    max_drawdown_bps: BasisPoints
+    min_track_record_months: Annotated[StrictInt, Field(ge=0, le=360)]
+    preferred_strategies: list[StrictStr]
+    excluded_strategies: list[StrictStr]
     strategy_concentration_cap_bps: BasisPoints
     max_candidates: Annotated[StrictInt, Field(ge=1, le=20)]
 
@@ -61,7 +74,7 @@ class MandateIn(MandateFields):
 
     model_config = ConfigDict(extra="forbid")
 
-    @field_validator("preferred_strategies")
+    @field_validator("preferred_strategies", "excluded_strategies")
     @classmethod
     def _normalize_strategies(cls, strategies: list[str]) -> list[str]:
         normalized: list[str] = []
@@ -72,6 +85,15 @@ class MandateIn(MandateFields):
             if name not in normalized:
                 normalized.append(name)
         return normalized
+
+    @model_validator(mode="after")
+    def _strategies_do_not_overlap(self) -> "MandateIn":
+        overlap = [name for name in self.preferred_strategies if name in self.excluded_strategies]
+        if overlap:
+            raise ValueError(
+                "A strategy cannot be both preferred and excluded: " + ", ".join(overlap) + "."
+            )
+        return self
 
 
 class MandateResponse(MandateFields):
