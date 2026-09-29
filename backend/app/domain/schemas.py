@@ -196,11 +196,22 @@ class FundRationale(BaseModel):
     claims: list[DraftClaim]
 
 
+class RankedFund(BaseModel):
+    """One fund in the LLM's proposed ranking (or drop list), with its cited rationale."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fund_id: str
+    rationale: DraftClaim
+
+
 class MemoDraft(BaseModel):
     """The only shape the LLM (or the template) may return."""
 
     model_config = ConfigDict(extra="forbid")
 
+    llm_ranking: list[RankedFund]
+    llm_dropped: list[RankedFund]
     executive_summary: list[DraftClaim]
     recommendation: list[DraftClaim]
     shortlist_rationale: list[FundRationale]
@@ -258,6 +269,9 @@ class MemoResponse(BaseModel):
     appendix: dict
     evidence_snapshot: list[EvidenceRecordOut]
     token_usage: dict | None
+    llm_ranking: dict | None = Field(
+        description="LLM-proposed ranking vs the deterministic baseline; null before memo-v3"
+    )
 
 
 class MemoCreate(BaseModel):

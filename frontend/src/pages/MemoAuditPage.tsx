@@ -3,6 +3,7 @@ import { ApiError, createMemo, getLatestMemo, getMemo, listMemos } from "../api/
 import { EvidenceDrawerProvider } from "../components/EvidenceDrawerContext";
 import { MemoAppendix } from "../components/MemoAppendix";
 import { MemoClaim } from "../components/MemoClaim";
+import { RankedShortlist } from "../components/RankedShortlist";
 import { formatDateTime } from "../lib/format";
 import type { AnalysisResponse, MemoResponse, MemoSection, MemoSummary } from "../types/api";
 
@@ -260,14 +261,16 @@ function MemoView({
         </div>
         {guard.memo_issues.length > 0 && (
           <ul className="mt-2 list-disc pl-5">
-            {guard.memo_issues.map((issue) => (
-              <li key={issue.code}>
+            {guard.memo_issues.map((issue, index) => (
+              <li key={`${issue.code}-${index}`}>
                 <span className="font-mono text-xs">{issue.code}</span> · {issue.message}
               </li>
             ))}
           </ul>
         )}
       </section>
+
+      <RankedShortlist ranking={memo.llm_ranking} claims={memo.claims} records={records} />
 
       {SECTIONS.map(([section, title]) => {
         const claims = memo.claims.filter((claim) => claim.section === section);

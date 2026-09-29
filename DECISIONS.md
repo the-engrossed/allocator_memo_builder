@@ -1,17 +1,10 @@
-> Draft decision entries created by implementation assistants remain under
-> `DRAFT — REVIEW REQUIRED` until reviewed and rewritten by the project author.
-
----
-
-# DRAFT — REVIEW REQUIRED
-
 ## Upload creates an analysis
 
 **Choice:** Each uploaded fund-universe CSV creates an `analysis` record. Later workflow artifacts—mandate settings, calculated metrics, ranking results, evidence, and memo output—are associated with that analysis.
 
 **Why:** An allocator's recommendation is meaningful only in the context of a specific universe, data-quality state, benchmark selection, and mandate. Using one analysis ID gives the workflow a stable audit boundary without introducing a multi-user workspace model.
 
-**Consequence:** V1 treats reruns as new analyses rather than mutating a prior run. A later version could support named scenarios that reuse one source universe with multiple mandates.
+**Consequence:** Re-running creates a new immutable ranking run on the same analysis, with its own mandate snapshot and sha256. A new upload creates a new analysis.
 
 ## Mandate is a one-to-one, fully replaced configuration stored in basis points
 
@@ -19,7 +12,7 @@
 
 **Why:** Integer basis points avoid float rounding in thresholds that later decide whether a fund is eligible. Requiring every field keeps a partial or misspelled payload from silently resetting a constraint to a default, which the memo audit trail could not explain. Replaying an identical payload is a no-op and does not advance `updated_at`.
 
-**Consequence:** Default values live only in the frontend form. Changing a mandate overwrites the prior version, and there is no mandate history in v1.
+**Consequence:** Default values live only in the frontend form. The mandate row keeps no history, but each ranking run stores the mandate snapshot and hash it used, so every decision stays reproducible.
 
 ## Mandate inputs split into hard screens, ranking, and shortlist construction
 
@@ -27,7 +20,8 @@ Resolves the earlier open item: AGENTS.md section 9 and the Stage 2 mandate disa
 
 **Choice:** Every mandate input has exactly one role.
 
-1. **Hard screens decide eligibility.** Each is pass or fail, and every boundary is inclusive. A fund must pass all of them to be ranked.
+1. **Hard screens decide eligibility.** Each is pass, fail, or unverifiable, and every boundary is inclusive. A fund must pass all of them to be ranked.
+   - The fund has no blocking validation issue (`DUPLICATE_PERIOD` or `RETURN_OUT_OF_RANGE`).
    - Redemption frequency is at least as frequent as `min_liquidity_frequency`. The order is monthly, quarterly, semiannual, annual.
    - `notice_days` is at most `max_notice_days`.
    - `lockup_months` is at most `max_lockup_months`.
@@ -46,7 +40,7 @@ Resolves the earlier open item: AGENTS.md section 9 and the Stage 2 mandate disa
 
 **Why:** A committee can defend a binary constraint or a published formula. It cannot defend a ranking quietly bent by preferences. Keeping preferences and concentration out of eligibility and scoring means every exclusion traces to one screen, and every ordering traces to the fixed weights.
 
-**Consequence:** When a field a screen reads is missing or invalid (for example, a non-numeric fee or an unknown liquidity value), that screen fails for the fund with the reason "unverifiable". The fund is never given a default value. Mandates that existed before `0003` were backfilled with values that screen nothing: annual liquidity, 10000 bps for volatility and drawdown, 0 months of track record, and no exclusions. That way the migration invents no constraint the allocator didn't set.
+**Consequence:** When a field a screen reads is missing or invalid (for example, a non-numeric fee or an unknown liquidity value), that screen's outcome is "unverifiable", which is distinct from fail. An unverifiable screen still excludes the fund, and no default value is substituted. Mandates that existed before `0003` were backfilled with values that screen nothing: annual liquidity, 10000 bps for volatility and drawdown, 0 months of track record, and no exclusions. That way the migration invents no constraint the allocator didn't set.
 
 ## Bare-return units are inferred per fund from the median absolute value
 
@@ -118,7 +112,7 @@ None of these block a fund, merge funds, or affect screening.
 
 **Choice:**
 - **Sharpe** is `mean(r_m − rf_m) / std(r_m) × √12`, with `rf_m = (1 + rf)^(1/12) − 1`. The annual `rf` is the mean monthly FRED DGS3MO rate over the fund's own window, or the configured fallback when FRED data isn't available. CAGR is a separate metric and is unverifiable below 12 months.
-- **Score components** use a percentile rank across eligible funds rather than min-max. That way F007's outlier Sharpe (about 15) doesn't squeeze every other fund's Sharpe score toward zero.
+- **Score components** use a percentile rank across eligible funds rather than min-max. That way F007's outlier Sharpe (about 16 with the live FRED risk-free rate) doesn't squeeze every other fund's Sharpe score toward zero.
 - **Benchmarks** come from daily adjusted closes, taking the last close of each month and dropping the current partial month. A cache under 24 hours old is used without a live call.
 - **Unavailable benchmark:** if a benchmark that an eligible fund needs is unavailable, every eligible fund's correlation component is set to 0 and the run warns `BENCHMARK_UNAVAILABLE`. This keeps scores comparable within the run. A single fund with fewer than 12 overlapping months gets 0 only for itself.
 - **Concentration floor:** the floor of one fund per strategy stays, and the run warns `CONCENTRATION_FLOOR_APPLIED` whenever it binds.
@@ -127,3 +121,27 @@ None of these block a fund, merge funds, or affect screening.
 **Why:** Each of these makes a result explainable in one sentence to a committee. Percentile ranks keep one implausible fund from reshaping everyone else's score. Zeroing correlation for the whole run keeps a data outage from rewarding the funds whose benchmark happened to load.
 
 **Consequence:** Scores are ordinal. A fund's score says where it sits among the eligible funds in that run, not how far ahead it is. Removing or adding an eligible fund can change the other funds' component scores.
+
+## Evidence display values are short labels
+
+**Choice:** Data-quality, selection, and notes chips show short labels, such as "Smooth returns", "Rank 1 · score 81.0", and "Manager notes". The full issue message, selection decision, and raw notes text are kept in the record's label and provenance, which the audit drawer shows.
+
+**Why:** Long messages inside chips made memo sentences hard to read. The chip only needs to say what kind of evidence it is; the audit drawer is where a reader checks the detail.
+
+**Consequence:** Existing memos keep their stored evidence snapshot, so older revisions still show the long values they were generated with.
+
+## Prompt memo-v2 after a real guard catch
+
+**Choice:** The system prompt now requires that a claim with a null `fund_id` name every fund whose evidence it cites, by fund ID, in the prose. The prompt version is `memo-v2`.
+
+**Why:** In testing, gpt-6-sol twice wrote multi-fund claims that cited F007 and F004 evidence without naming either fund. The guard flagged both as `CITED_FUND_NOT_NAMED`. The guard caught the problem; the prompt change makes it less likely to recur.
+
+**Consequence:** Revision 3 (memo-v1, flagged) is kept unchanged as the record of the catch. Memos store their `prompt_version`, so v1 and v2 output can be compared.
+
+## The LLM proposes a ranked shortlist within deterministic limits (memo-v3, memo-v4)
+
+**Choice:** Screens, eligibility, scores, and the baseline shortlist stay deterministic. The memo draft adds `llm_ranking` (an ordered list of eligible funds, each with a rationale claim) and `llm_dropped` (baseline-shortlisted funds left out, each with a rationale claim). The LLM may reorder the baseline, add an eligible fund, or drop a shortlisted one. Deterministic memo-level rules flag a ranked fund that isn't eligible, a fund listed twice, more funds than `max_candidates`, more funds per strategy than the concentration limit, an invalid drop entry, and any fund whose position differs from its baseline shortlist position without citing its own DQ, SRC, SCR, or MET evidence. From `memo-v4`, `LLM_RANK_REWEIGHTS_SCORE` also flags any pair of funds ordered against their baseline ranks unless at least one of the two cites evidence the score doesn't already weigh: DQ, SRC (including notes), SCR, or a MET other than Sharpe, annualized return, max drawdown, or correlation. The prompt tells the model to reorder only on such evidence. Recommendations must name funds in the LLM ranking. Each memo stores the ranking with baseline rank, LLM rank, and delta per fund; the template memo stores the baseline order with source `baseline`.
+
+**Why:** The brief asks for an LLM-produced ranked shortlist. Letting the model reorder only inside the eligible set, under the mandate's capacity and concentration limits, keeps every hard constraint deterministic while letting it act on evidence the score ignores, such as F007's smooth returns and manager notes. Requiring a citation for every move makes each change traceable. In `memo-v3`, the model promoted F003 from fourth to first on correlation, return, and drawdown alone, which re-weighs the formula rather than adding information; `memo-v4` closes that. In `memo-v4` revision 6, the model then promoted F003 to first citing only its notice and lockup screen passes. Every eligible fund passes every screen, so a pass separates nothing: `SCR-*-PASS` records of eligible funds no longer count as evidence for `LLM_RANK_MOVE_UNCITED` or `LLM_RANK_REWEIGHTS_SCORE`. Re-running the guard read-only on revision 6 now flags `LLM_RANK_MOVE_UNCITED` for F003; the stored memo and its clean guard result are kept unchanged.
+
+**Consequence:** The guard checks that a move cites the right kind of evidence, not that the evidence justifies the move; the baseline rank shown next to every fund is the reader's check. Memos before `memo-v3` have no stored ranking and keep checking recommendations against the baseline shortlist. AGENTS.md section 1 is amended to match.

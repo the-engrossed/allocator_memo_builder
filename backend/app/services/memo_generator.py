@@ -13,21 +13,24 @@ from pydantic import ValidationError
 
 from app.config import settings
 from app.domain.models import FundEvaluation, RankingRun
-from app.domain.schemas import DraftClaim, FundRationale, MemoDraft
+from app.domain.schemas import DraftClaim, FundRationale, MemoDraft, RankedFund
 from app.services.benchmarks import redact_secrets
+from app.services.claim_guard import RankingLimits
 from app.services.evidence_registry import (
     UNTRUSTED_SOURCE_FIELDS,
     EvidenceRecord,
     selection_evidence_id,
 )
+from app.services.ranking import strategy_limit
 
-PROMPT_VERSION = "memo-v2"
+PROMPT_VERSION = "memo-v5"
 MAX_CONNECTION_ATTEMPTS = 2
 SELECTED = ("SELECTED_PREFERENCE_PASS", "SELECTED_RANK_PASS")
 
 SYSTEM_PROMPT = """\
-You draft an Investment Committee memo for an allocator. You write narrative only; deterministic
-software has already computed every figure, screen, rank, and shortlist decision.
+You draft an Investment Committee memo for an allocator. Deterministic software has already
+computed every figure, screen, score, and a baseline shortlist. You write the narrative and propose
+the committee's ranked shortlist within the rules below; you never compute figures.
 
 Evidence and figures
 - Use only the evidence listed in <run_facts>. Never invent facts, figures, or evidence IDs.
@@ -49,14 +52,36 @@ Claims
   fund_id may cite only that fund's evidence plus BMK-* and RUN-* evidence. In a claim with fund_id
   null, name every fund whose evidence you cite, by fund ID, in the prose.
 
+Ranked shortlist
+- <run_facts> eligible_funds lists every fund that passed all hard screens, with its baseline_rank,
+  baseline_shortlist_position (null if not on the baseline shortlist), score, selection reason, and
+  selection evidence. ranking_limits gives max_candidates, per_strategy_limit, and
+  same_strategy_groups (eligible funds that share a strategy).
+- llm_ranking: your ranked shortlist, best first. Use only funds from eligible_funds, each once,
+  at most max_candidates funds, and at most per_strategy_limit funds from any same_strategy_group.
+  You may keep the baseline order, reorder it, add an eligible fund that is not on the baseline
+  shortlist, or leave out a baseline-shortlisted fund.
+- llm_dropped: every baseline-shortlisted fund you left out of llm_ranking, and no other fund.
+- Each entry has one rationale claim whose fund_id is that entry's fund_id. If a fund's position
+  in llm_ranking differs from its baseline_shortlist_position (including added and dropped funds),
+  its rationale must cite that fund's own DQ-*, SRC-*, SCR-*, or MET-* evidence for the change.
+  SEL-* evidence alone does not justify a move. Passing a screen is not a reason to move a fund;
+  every eligible fund passes every screen.
+- Reorder only on information the deterministic score does not already weigh (data quality,
+  manager notes, terms, screens); never re-weigh Sharpe, return, drawdown, or correlation. When you
+  place a fund above one with a better baseline_rank, at least one of the two rationales must cite
+  such evidence (DQ-*, SRC-*, SCR-*, or a MET-* other than Sharpe, annualized return, maximum
+  drawdown, or correlation).
+
 Sections
-- executive_summary: the shortlist outcome, key drivers, and the most important caveats.
-- recommendation: only funds on the shortlist (fund_id must be a shortlisted fund or null). If the
-  top-ranked shortlisted fund has data-quality evidence (DQ-*), the recommendation must include a
-  claim with that fund's fund_id stating explicitly whether it advances and on what diligence
-  conditions, citing its DQ-* markers and its SRC-*-NOTES marker when one is listed.
-- shortlist_rationale: exactly one entry per shortlisted fund, in the given rank order; every claim
-  in an entry uses that entry's fund_id.
+- executive_summary: the ranked shortlist outcome, key drivers, and the most important caveats.
+- recommendation: only funds in your llm_ranking (fund_id must be a fund in llm_ranking or null).
+  If the top-ranked baseline fund has data-quality evidence (DQ-*), the recommendation must include
+  a claim with that fund's fund_id stating explicitly whether it advances and on what diligence
+  conditions, citing its DQ-* markers and its SRC-*-NOTES marker when one is listed. If you drop
+  that fund, its llm_dropped rationale must cite those markers instead.
+- shortlist_rationale: exactly one entry per baseline-shortlisted fund, in baseline rank order;
+  every claim in an entry uses that entry's fund_id.
 - key_risks: call out data-quality concerns explicitly (for example implausibly smooth returns and
   what the manager's notes say about administration or audit), plus exclusions and benchmark
   caveats that matter to the committee. Cite the DQ-*, SRC-*, SCR-*, BMK-*, or RUN-* evidence.
@@ -90,6 +115,21 @@ class MemoContext:
     @property
     def shortlist_ids(self) -> list[str]:
         return [fund.fund_id for fund in self.shortlist]
+
+    @property
+    def eligible(self) -> list[FundEvaluation]:
+        return sorted([*self.shortlist, *self.not_selected], key=lambda fund: fund.rank or 0)
+
+    def ranking_limits(self) -> RankingLimits:
+        mandate = self.run.mandate_snapshot
+        return RankingLimits(
+            eligible_strategies={fund.fund_id: fund.strategy for fund in self.eligible},
+            max_candidates=mandate["max_candidates"],
+            strategy_limit=strategy_limit(
+                mandate["max_candidates"], mandate["strategy_concentration_cap_bps"]
+            ),
+            baseline_ranks={fund.fund_id: fund.rank for fund in self.eligible if fund.rank is not None},
+        )
 
     def records_for(self, fund_id: str, record_type: str) -> list[EvidenceRecord]:
         return [
@@ -198,8 +238,22 @@ def generate_llm_draft(context: MemoContext) -> tuple[MemoDraft, dict, int]:
 
 
 def generate_template_draft(context: MemoContext) -> MemoDraft:
-    """Deterministic memo with the same claim structure; every figure is a marker."""
+    """Deterministic memo with the same claim structure; every figure is a marker.
+
+    Its ranked shortlist is the baseline order, so no move needs justifying.
+    """
     return MemoDraft(
+        llm_ranking=[
+            RankedFund(
+                fund_id=fund.fund_id,
+                rationale=_claim(
+                    f"{fund.fund_id} keeps its baseline position [[{_selection_id(fund)}]].",
+                    [_selection_id(fund)], "qualitative", fund.fund_id,
+                ),
+            )
+            for fund in context.shortlist
+        ],
+        llm_dropped=[],
         executive_summary=_template_summary(context),
         recommendation=_template_recommendation(context),
         shortlist_rationale=[
@@ -220,7 +274,28 @@ def _user_prompt(context: MemoContext) -> str:
             "selection": registry[selection_evidence_id(fund.fund_id, fund.selection_reason)].display_value,
         }
 
+    limits = context.ranking_limits()
+    groups: dict[str, list[str]] = {}
+    for fund in context.eligible:
+        groups.setdefault(fund.strategy.strip().casefold(), []).append(fund.fund_id)
+    baseline_position = {fund_id: i for i, fund_id in enumerate(context.shortlist_ids, start=1)}
     facts = {
+        "eligible_funds": [
+            {
+                "fund_id": fund.fund_id,
+                "baseline_rank": fund.rank,
+                "baseline_shortlist_position": baseline_position.get(fund.fund_id),
+                "score": None if fund.total_score is None else float(fund.total_score),
+                "selection_reason": fund.selection_reason,
+                "selection_evidence_id": _selection_id(fund),
+            }
+            for fund in context.eligible
+        ],
+        "ranking_limits": {
+            "max_candidates": limits.max_candidates,
+            "per_strategy_limit": limits.strategy_limit,
+            "same_strategy_groups": [ids for ids in groups.values() if len(ids) > 1],
+        },
         "mandate": context.run.mandate_snapshot,
         "shortlist_in_rank_order": [selection(fund) for fund in context.shortlist],
         "eligible_not_selected": [selection(fund) for fund in context.not_selected],

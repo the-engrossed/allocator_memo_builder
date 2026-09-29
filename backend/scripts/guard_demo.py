@@ -88,11 +88,10 @@ def run_guard_demo(session: Session, run_id: uuid.UUID) -> DemoResult:
         for index, claim in enumerate(PLANTED)
     ]
     claims = [*(dict(claim) for claim in memo.claims), *planted]
-    rationale_entries = list(
-        dict.fromkeys(
-            claim["rationale_fund_id"] for claim in memo.claims if claim["rationale_fund_id"] is not None
-        )
-    )
+    def section_funds(section: str) -> list[str]:
+        return [c["rationale_fund_id"] for c in memo.claims if c["section"] == section]
+
+    has_ranking = memo.llm_ranking is not None
     results, summary = guard_memo(
         claims,
         GuardContext(
@@ -100,8 +99,11 @@ def run_guard_demo(session: Session, run_id: uuid.UUID) -> DemoResult:
             context.shortlist_ids,
             context.allowed_tokens(),
             {fund.fund_id: fund.fund_name for fund in run.evaluations},
+            context.ranking_limits(),
         ),
-        rationale_entries,
+        list(dict.fromkeys(section_funds("shortlist_rationale"))),
+        section_funds("llm_ranking") if has_ranking else None,
+        section_funds("llm_dropped") if has_ranking else None,
     )
     by_id = {result.claim_id: result for result in results}
     return DemoResult(

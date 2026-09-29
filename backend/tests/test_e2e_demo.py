@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.domain.models import MemoArtifact
 from app.services import benchmarks
-from tests.test_memos import _install_llm, _mock_llm_draft, _response
+from tests.test_memos import _install_llm, _mock_llm_draft, _ranked, _response, _sel
 from tests.test_ranking_runs import DEFAULT_MANDATE, SAMPLE
 
 SMOOTH_DQ = "DQ-F007-SMOOTH-RETURNS-NET-RETURN"
@@ -73,13 +73,24 @@ def test_demo_flow_end_to_end(
     assert run["summary"]["shortlisted"] == 5
     assert funds["F006"]["selection_reason"] == "CAPACITY_REACHED"
 
-    fake = _install_llm(monkeypatch, _response(_mock_llm_draft(run)))
+    demoted = [
+        _ranked("F004", "MET-F004-SHARPE"),
+        _ranked("F001", "MET-F001-SHARPE"),
+        _ranked("F007", SMOOTH_DQ, NOTES_SRC),
+        _ranked("F003", _sel(run, "F003")),
+        _ranked("F002", _sel(run, "F002")),
+    ]
+    fake = _install_llm(monkeypatch, _response(_mock_llm_draft(run, demoted)))
     llm_post = client.post(f"/api/ranking-runs/{run_id}/memos")
     assert llm_post.status_code == 201, llm_post.text
     llm_memo = llm_post.json()
     assert len(fake.calls) == 1
     assert llm_memo["revision"] == 1 and llm_memo["generation_mode"] == "llm"
     assert llm_memo["guard_summary"]["status"] == "clean", llm_memo["guard_summary"]
+    f007 = next(row for row in llm_memo["llm_ranking"]["entries"] if row["fund_id"] == "F007")
+    assert (f007["baseline_rank"], f007["llm_rank"], f007["move"]) == (1, 3, "down")
+    f007_rationale = next(c for c in llm_memo["claims"] if c["claim_id"] == f007["claim_id"])
+    assert SMOOTH_DQ in f007_rationale["evidence_ids"] and f007_rationale["guard_status"] == "ok"
     recommendation = [c for c in llm_memo["claims"] if c["section"] == "recommendation"]
     assert recommendation and all(c["guard_status"] == "ok" for c in recommendation)
     cited = {evidence_id for claim in recommendation for evidence_id in claim["evidence_ids"]}
@@ -91,6 +102,7 @@ def test_demo_flow_end_to_end(
     assert template_memo["revision"] == 2
     assert template_memo["generation_mode"] == "template"
     assert template_memo["fallback_reason"] == "template requested"
+    assert template_memo["llm_ranking"]["source"] == "baseline"
     assert len(fake.calls) == 1
 
     # Production requests each get a fresh session; read back from Postgres the same way.

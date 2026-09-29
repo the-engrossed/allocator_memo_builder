@@ -33,6 +33,7 @@ from app.services.memo_generator import (
 from app.services.ranking_runs import get_ranking_run
 
 SECTIONS = ("executive_summary", "recommendation", "shortlist_rationale", "key_risks")
+RANKING_SECTIONS = ("llm_ranking", "llm_dropped")
 APPENDIX_METRICS = (
     "months_of_history",
     "annualized_return_bps",
@@ -85,8 +86,11 @@ def create_memo(
             context.shortlist_ids,
             context.allowed_tokens(),
             {fund.fund_id: fund.fund_name for fund in run.evaluations},
+            context.ranking_limits(),
         ),
         [entry.fund_id for entry in draft.shortlist_rationale],
+        [entry.fund_id for entry in draft.llm_ranking],
+        [entry.fund_id for entry in draft.llm_dropped],
     )
     memo = MemoArtifact(
         id=uuid.uuid4(),
@@ -103,6 +107,7 @@ def create_memo(
         appendix=build_appendix(context),
         evidence_snapshot=[record.to_json() for record in registry.values()],
         token_usage=token_usage,
+        llm_ranking=build_llm_ranking(draft, context, "llm" if mode == "llm" else "baseline"),
         created_at=datetime.now(timezone.utc),
     )
     session.add(memo)
@@ -190,6 +195,7 @@ def memo_to_response(memo: MemoArtifact) -> MemoResponse:
         appendix=memo.appendix,
         evidence_snapshot=[EvidenceRecordOut(**record) for record in memo.evidence_snapshot],
         token_usage=memo.token_usage,
+        llm_ranking=memo.llm_ranking,
     )
 
 
@@ -211,6 +217,9 @@ def flatten_draft(draft: MemoDraft) -> list[dict]:
             }
         )
 
+    for section in RANKING_SECTIONS:
+        for index, entry in enumerate(getattr(draft, section), start=1):
+            add(section, index - 1, entry.rationale, entry.fund_id, f"{section}-{index}")
     for section in SECTIONS:
         if section == "shortlist_rationale":
             for entry_index, entry in enumerate(draft.shortlist_rationale, start=1):
@@ -220,6 +229,54 @@ def flatten_draft(draft: MemoDraft) -> list[dict]:
             for index, claim in enumerate(getattr(draft, section)):
                 add(section, index, claim, None, f"{section}-{index + 1}")
     return claims
+
+
+def build_llm_ranking(draft: MemoDraft, context: MemoContext, source: str) -> dict:
+    """The proposed order vs the deterministic baseline, stored verbatim (invalid entries included)."""
+    baseline = {fund_id: position for position, fund_id in enumerate(context.shortlist_ids, start=1)}
+    funds = {fund.fund_id: fund for fund in context.run.evaluations}
+
+    def row(fund_id: str, llm_rank: int | None, move: str, claim_id: str | None) -> dict:
+        fund = funds.get(fund_id)
+        eligible = fund is not None and fund.eligible
+        position = baseline.get(fund_id)
+        return {
+            "fund_id": fund_id,
+            "eligible": eligible,
+            "baseline_rank": fund.rank if eligible else None,
+            "baseline_position": position,
+            "llm_rank": llm_rank,
+            "delta": None if position is None or llm_rank is None else position - llm_rank,
+            "move": move,
+            "claim_id": claim_id,
+        }
+
+    entries = []
+    for llm_rank, entry in enumerate(draft.llm_ranking, start=1):
+        position = baseline.get(entry.fund_id)
+        move = (
+            "new" if position is None
+            else "up" if position > llm_rank
+            else "down" if position < llm_rank
+            else "same"
+        )
+        entries.append(row(entry.fund_id, llm_rank, move, f"llm_ranking-{llm_rank}"))
+
+    ranked = {entry.fund_id for entry in draft.llm_ranking}
+    drop_claims: dict[str, str] = {}
+    for index, entry in enumerate(draft.llm_dropped, start=1):
+        drop_claims.setdefault(entry.fund_id, f"llm_dropped-{index}")
+    dropped = [
+        row(fund_id, None, "dropped", drop_claims.get(fund_id))
+        for fund_id in context.shortlist_ids
+        if fund_id not in ranked
+    ]
+    dropped += [
+        row(entry.fund_id, None, "invalid_drop", f"llm_dropped-{index}")
+        for index, entry in enumerate(draft.llm_dropped, start=1)
+        if entry.fund_id not in baseline or entry.fund_id in ranked
+    ]
+    return {"source": source, "entries": entries, "dropped": dropped}
 
 
 def build_appendix(context: MemoContext) -> dict:

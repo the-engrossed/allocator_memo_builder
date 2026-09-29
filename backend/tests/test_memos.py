@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.domain.models import RankingRun
-from app.domain.schemas import DraftClaim, FundRationale, MemoDraft
+from app.domain.schemas import DraftClaim, FundRationale, MemoDraft, RankedFund
 from app.services import memo_generator
 from app.services.evidence_registry import build_registry
 from tests.test_ranking_runs import DEFAULT_MANDATE, _post_run, _sample_analysis
@@ -69,18 +69,58 @@ def _by_section(memo: dict, section: str) -> list[dict]:
     return [claim for claim in memo["claims"] if claim["section"] == section]
 
 
-def _mock_llm_draft(run: dict) -> MemoDraft:
-    """What a well-behaved model would return for the sample run, using only issued IDs."""
+def _sel(run: dict, fund_id: str) -> str:
+    fund = next(f for f in run["funds"] if f["fund_id"] == fund_id)
+    return f"SEL-{fund_id}-{fund['selection_reason'].replace('_', '-')}"
+
+
+def _ranked(fund_id: str, *evidence_ids: str) -> RankedFund:
+    markers = " ".join(f"[[{evidence_id}]]" for evidence_id in evidence_ids)
+    return RankedFund(
+        fund_id=fund_id,
+        rationale=DraftClaim(
+            text=f"{fund_id} takes this place on the evidence {markers}.",
+            evidence_ids=list(evidence_ids),
+            claim_type="qualitative",
+            fund_id=fund_id,
+        ),
+    )
+
+
+def _mock_llm_draft(
+    run: dict,
+    llm_ranking: list[RankedFund] | None = None,
+    llm_dropped: list[RankedFund] | None = None,
+    recommend: list[str] | None = None,
+    recommend_top: bool = True,
+) -> MemoDraft:
+    """What a well-behaved model would return for the sample run, using only issued IDs.
+
+    Without llm_ranking the model keeps the baseline order, citing each fund's SEL record.
+    """
     funds = {fund["fund_id"]: fund for fund in run["funds"]}
     shortlist = [f for f in run["funds"] if f["selection_reason"] in SELECTED]
     top = shortlist[0]["fund_id"]
 
     def sel(fund_id: str) -> str:
-        return f"SEL-{fund_id}-{funds[fund_id]['selection_reason'].replace('_', '-')}"
+        return _sel(run, fund_id)
 
     top_dq = [d["evidence_id"] for d in funds[top]["data_quality"]]
     notes = funds[top]["inputs"]["notes"]["evidence_id"]
+    if llm_ranking is None:
+        llm_ranking = [_ranked(f["fund_id"], sel(f["fund_id"])) for f in shortlist]
+    extra_recommendations = [
+        DraftClaim(
+            text=f"Advance {fund_id} to standard due diligence [[{sel(fund_id)}]].",
+            evidence_ids=[sel(fund_id)],
+            claim_type="judgment",
+            fund_id=fund_id,
+        )
+        for fund_id in (recommend or [])
+    ]
     return MemoDraft(
+        llm_ranking=llm_ranking,
+        llm_dropped=llm_dropped or [],
         executive_summary=[
             DraftClaim(
                 text="The screen shortlisted " + ", ".join(f"{f['fund_id']} [[{sel(f['fund_id'])}]]" for f in shortlist) + ".",
@@ -101,7 +141,8 @@ def _mock_llm_draft(run: dict) -> MemoDraft:
                 claim_type="judgment",
                 fund_id=top,
             )
-        ],
+        ][: 1 if recommend_top else 0]
+        + extra_recommendations,
         shortlist_rationale=[
             FundRationale(
                 fund_id=f["fund_id"],
@@ -208,7 +249,7 @@ def test_missing_key_uses_a_clean_template_memo(client: TestClient, live_benchma
     assert memo["generation_mode"] == "template"
     assert memo["fallback_reason"] == "OPENAI_API_KEY is not set"
     assert memo["model"] is None and memo["token_usage"] is None
-    assert memo["revision"] == 1 and memo["prompt_version"] == "memo-v2"
+    assert memo["revision"] == 1 and memo["prompt_version"] == "memo-v5"
     assert memo["guard_summary"]["status"] == "clean", memo["guard_summary"]
     assert memo["guard_summary"]["flagged"] == 0
 
@@ -316,7 +357,8 @@ def test_mocked_llm_memo_cites_top_fund_data_quality(
     assert memo["model"] == "gpt-6-sol" and memo["fallback_reason"] is None
     assert memo["token_usage"] == {"input_tokens": 5200, "output_tokens": 1800, "total_tokens": 7000}
     assert memo["llm_attempts"] == 1
-    assert memo["guard_summary"] == {"total": 8, "ok": 8, "flagged": 0, "memo_issues": [], "status": "clean"}
+    # Eight narrative claims plus one ranking rationale per shortlisted fund.
+    assert memo["guard_summary"] == {"total": 13, "ok": 13, "flagged": 0, "memo_issues": [], "status": "clean"}
 
     f007 = [c for c in memo["claims"] if c["fund_id"] == "F007"]
     cited = set().union(*(set(c["evidence_ids"]) for c in f007))

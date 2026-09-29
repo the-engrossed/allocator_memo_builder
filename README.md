@@ -2,14 +2,14 @@
 
 Turns a messy fund-universe CSV and an allocator mandate into a screened, ranked shortlist and a draft Investment Committee memo in which every figure links back to its source.
 
-**Thesis:** Python owns every number. The LLM only writes claims that point to evidence IDs, and a deterministic claim guard checks every claim before a person reads it.
+**Thesis:** Python owns every number, every screen, and the baseline ranking. The LLM writes claims that point to evidence IDs and proposes a ranked shortlist within deterministic limits, and a deterministic guard checks both before a person reads them.
 
 ## Workflow
 
 1. **Upload & Validation.** Upload a CSV. Columns are mapped, return units are inferred per fund, and every row is validated. Issues are listed with row numbers; blocking issues remove a fund from analysis.
 2. **Mandate.** Set hard screens (fees, liquidity, notice, lockup, volatility, drawdown, track record, excluded strategies) and shortlist construction (preferred strategies, concentration cap, number of candidates).
 3. **Analysis & Ranking.** Benchmarks and the risk-free rate are resolved and recorded with provenance. Funds are screened, eligible funds are scored and ranked, and a shortlist is built. Each run is stored immutably.
-4. **IC Memo & Audit.** The LLM drafts the memo from the stored run. Every figure renders as a chip; clicking it opens an audit drawer with the evidence record and its provenance. Guard results appear on each claim and in a banner. A template memo (no LLM) is always available.
+4. **IC Memo & Audit.** The LLM drafts the memo from the stored run and proposes a ranked shortlist: it may reorder the deterministic shortlist, add an eligible fund, or drop one, and every move must cite evidence. The Ranked shortlist section shows each fund's LLM rank next to its deterministic baseline rank. Every figure renders as a chip; clicking it opens an audit drawer with the evidence record and its provenance. Guard results appear on each claim and in a banner. A template memo (no LLM) is always available.
 
 ![Analysis and ranking](docs/screenshots/analysis-ranking.png)
 ![Memo with claim guard](docs/screenshots/memo-audit.png)
@@ -58,7 +58,7 @@ Design decisions and trade-offs: see [DECISIONS.md](DECISIONS.md).
 | `Mandate` | One per analysis, fully replaced on save. All thresholds are integer basis points. |
 | `RankingRun` | Mandate snapshot and its sha256, policy version, benchmark provenance, score weights, warnings. |
 | `FundEvaluation` | Per fund per run: inputs, metrics, screen results, score components, rank, selection reason, data-quality items. |
-| `MemoArtifact` | Revisioned memo per run: claims, guard results and summary, appendix, evidence snapshot, model, prompt version, token usage, fallback reason. |
+| `MemoArtifact` | Revisioned memo per run: claims, guard results and summary, appendix, evidence snapshot, LLM ranking vs baseline (baseline rank, LLM rank, delta per fund), model, prompt version, token usage, fallback reason. |
 
 Immutability: a run copies the mandate it used and stores its sha256, so editing the mandate later creates a new run and leaves the old one unchanged. Memos are numbered revisions per run and are never updated. Each memo stores the full evidence registry it was generated against (`evidence_snapshot`), so its chips resolve the same way forever.
 
@@ -98,7 +98,7 @@ The evidence registry is built from one persisted run. Every figure the memo may
 | `BMK` | `BMK-SPY`, `BMK-AGG`, `BMK-RF` | Benchmark or risk-free series and its provenance |
 | `RUN` | `RUN-CONCENTRATION-FLOOR-APPLIED` | Run-level warning |
 
-The LLM returns structured claims (text, `evidence_ids`, claim type, fund). Figures appear only as `[[EVIDENCE-ID]]` markers, which the UI replaces with the registry's display value. The guard flags claims; it never edits or deletes them.
+The LLM returns structured claims (text, `evidence_ids`, claim type, fund). Figures appear only as `[[EVIDENCE-ID]]` markers, which the UI replaces with the registry's display value. It also returns `llm_ranking` (an ordered list of eligible funds, each with a rationale claim) and `llm_dropped` (baseline-shortlisted funds it left out, each with a rationale claim). Eligibility, scores, and the baseline shortlist stay deterministic; the LLM ranking can only reorder within the eligible set, and deterministic rules check it. The guard flags claims; it never edits or deletes them.
 
 | Rule | Flags |
 | --- | --- |
@@ -110,10 +110,17 @@ The LLM returns structured claims (text, `evidence_ids`, claim type, fund). Figu
 | `CROSS_FUND_EVIDENCE` | A claim about one fund citing another fund's evidence (`BMK`, `RUN` allowed) |
 | `CITED_FUND_NOT_NAMED` | A multi-fund claim that cites a fund's evidence without naming that fund |
 | `RATIONALE_FUND_MISMATCH` | A claim inside one fund's rationale about a different fund |
-| `NOT_SHORTLISTED_RECOMMENDATION` | A recommendation for a fund not on the shortlist |
+| `NOT_SHORTLISTED_RECOMMENDATION` | A recommendation for a fund that is not in the LLM ranking of eligible funds (the baseline shortlist for memos before `memo-v3`) |
 | `UNVERIFIED_EVIDENCE_AS_FACT` | A quantitative claim relying on unverifiable, invalid, or missing evidence |
 | `SHORTLIST_RATIONALE_COVERAGE` (memo) | Rationale does not cover each shortlisted fund once, in rank order |
-| `TOP_FUND_DATA_QUALITY_UNADDRESSED` (memo) | The recommendation does not cite the top fund's data-quality issues and notes |
+| `TOP_FUND_DATA_QUALITY_UNADDRESSED` (memo) | The recommendation (or the drop rationale, if the LLM drops it) does not cite the top baseline fund's data-quality issues and notes |
+| `LLM_RANK_INELIGIBLE_FUND` (memo) | The LLM ranking includes a fund that did not pass every hard screen |
+| `LLM_RANK_DUPLICATE` (memo) | A fund appears more than once across the ranking and drop list |
+| `LLM_RANK_OVER_CAPACITY` (memo) | The LLM ranking lists more funds than `max_candidates` |
+| `LLM_RANK_CONCENTRATION` (memo) | More ranked funds in one strategy than the per-strategy limit |
+| `LLM_RANK_MOVE_UNCITED` (memo) | A fund whose LLM position differs from its baseline shortlist position (moved, added, or dropped) does not cite its own DQ, SRC, SCR, or MET evidence (screen passes of eligible funds don't count) |
+| `LLM_RANK_REWEIGHTS_SCORE` (memo) | Two funds are ordered against their baseline ranks and neither rationale cites evidence the score doesn't already weigh: DQ, SRC (including notes), a failing or unverifiable SCR, or a MET other than Sharpe, annualized return, max drawdown, or correlation |
+| `LLM_RANK_INVALID_DROP` (memo) | A drop entry for a fund that was not on the baseline shortlist or is also ranked |
 
 The memo's guard status is `clean` only when no claim is flagged and there are no memo-level issues. `scripts/guard_demo.py` appends four planted bad claims to a stored memo and runs the same guard read-only.
 
@@ -155,13 +162,13 @@ On macOS, if `docker compose up` fails with `mkdir /host_mnt/...: operation not 
 
 ## Tests
 
-278 backend tests, all against PostgreSQL. None call OpenAI, Yahoo Finance, or FRED: fixtures stub those clients, and a test that tries to build a real OpenAI client fails.
+293 backend tests, all against PostgreSQL. None call OpenAI, Yahoo Finance, or FRED: fixtures stub those clients, and a test that tries to build a real OpenAI client fails.
 
 | Layer | Files | Tests |
 | --- | --- | --- |
 | Pure functions | `test_metrics.py`, `test_ranking.py`, `test_claim_guard.py` | 60 |
 | Ingestion, validation, benchmark resolution | `test_ingestion.py`, `test_validation.py`, `test_benchmarks.py` | 92 |
-| API and services on Postgres | `test_mandates.py`, `test_ranking_runs.py`, `test_memos.py` | 123 |
+| API and services on Postgres | `test_mandates.py`, `test_ranking_runs.py`, `test_memos.py`, `test_llm_ranking.py` | 138 |
 | End-to-end demo path and guard demo script | `test_e2e_demo.py`, `test_guard_demo.py` | 3 |
 
 In a container:
@@ -188,11 +195,10 @@ TEST_DATABASE_URL=postgresql+psycopg://allocator:allocator@localhost:5432/alloca
 - Memo generation is a synchronous request of roughly 40–50 seconds.
 - The sample universe is synthetic, generated by `backend/app/seed/sample_data.py`.
 - There is no authentication.
-- The LLM explains the deterministic shortlist; it cannot change it.
+- The LLM ranking is checked for eligibility, capacity, concentration, cited evidence, and whether each reorder rests on evidence the score doesn't already weigh, not for whether the reasoning is sound. A move can cite real evidence that doesn't justify it; the baseline rank is shown next to every fund so a reader can see what changed.
 
 ## What I'd do next
 
-- Let the LLM propose ranking adjustments, each with a cited justification, as a separate reviewable layer on top of the deterministic ranking.
 - Add a semantic check that a claim's wording matches what its cited evidence says.
 - Build an evaluation set of runs and expected guard outcomes, tracked by `prompt_version`.
 - Move memo generation to a background job with progress reporting.

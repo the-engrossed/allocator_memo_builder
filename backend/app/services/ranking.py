@@ -260,10 +260,15 @@ def rank_order(
     return [inputs for inputs, _ in sorted(candidates, key=key)]
 
 
+def strategy_limit(max_candidates: int, concentration_cap_bps: int) -> int:
+    """Funds allowed per strategy on a shortlist: max(1, floor(max_candidates × cap / 10000))."""
+    return max(1, max_candidates * concentration_cap_bps // 10_000)
+
+
 def build_shortlist(ranked: list[FundInputs], mandate: MandateFields) -> ShortlistResult:
     """Pass 1: preferred-strategy funds in rank order. Pass 2: the rest in rank order."""
     raw_limit = mandate.max_candidates * mandate.strategy_concentration_cap_bps // 10_000
-    limit = max(1, raw_limit)
+    limit = strategy_limit(mandate.max_candidates, mandate.strategy_concentration_cap_bps)
     warnings: list[RunWarning] = []
     if raw_limit < 1:
         warnings.append(

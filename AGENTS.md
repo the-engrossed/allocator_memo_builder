@@ -44,10 +44,13 @@ Python code—not the LLM—must:
 - Retrieve and align benchmark observations.
 - Compute financial metrics.
 - Apply mandate constraints.
-- Determine eligibility, exclusion reasons, ranking, and ranking score.
+- Determine eligibility, exclusion reasons, baseline ranking, and ranking score.
 - Resolve every final financial value displayed in the memo or UI.
 
-The LLM may not calculate, rank, screen, or decide whether a fund advances.
+The LLM may not calculate, screen, or decide eligibility. The LLM may propose an ordering of
+eligible funds (`llm_ranking`) within deterministic limits; every move must cite evidence and is
+checked by the guard. Reorders must rest on evidence the score does not already weigh.
+Eligibility, scores, and the baseline shortlist remain deterministic.
 
 ### 2. No invented or model-generated financial numbers
 

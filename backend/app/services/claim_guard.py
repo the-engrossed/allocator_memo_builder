@@ -4,7 +4,8 @@ Flagged claims are reported, never deleted or rewritten.
 """
 
 import re
-from dataclasses import dataclass, field
+from collections import Counter
+from dataclasses import dataclass, field, replace
 
 from app.services.evidence_registry import EvidenceRecord
 
@@ -15,6 +16,20 @@ MONTH_YEAR = re.compile(
 )
 UNVERIFIED_STATUSES = {"unverifiable", "invalid", "missing"}
 FUND_NEUTRAL_TYPES = {"benchmark", "run_warning"}
+# Evidence that can justify moving a fund away from its baseline position; SEL only restates it.
+MOVE_EVIDENCE_TYPES = {"data_quality", "source_field", "screen_result", "metric"}
+# Metrics the deterministic score already weighs; citing them cannot justify inverting two funds.
+SCORE_INPUT_METRIC = re.compile(r"^MET-.+-(SHARPE|ANNUALIZED-RETURN|MAX-DRAWDOWN|CORRELATION-[A-Z]+)$")
+
+
+@dataclass(frozen=True)
+class RankingLimits:
+    """Deterministic bounds on the LLM ranking, taken from the run and its mandate snapshot."""
+
+    eligible_strategies: dict[str, str]
+    max_candidates: int
+    strategy_limit: int
+    baseline_ranks: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass
@@ -23,6 +38,9 @@ class GuardContext:
     shortlist: list[str]
     allowed_tokens: list[str] = field(default_factory=list)
     fund_names: dict[str, str] = field(default_factory=dict)
+    ranking_limits: RankingLimits | None = None
+    # Funds a recommendation may name; None means the baseline shortlist.
+    recommendable: list[str] | None = None
 
 
 @dataclass
@@ -104,8 +122,10 @@ def check_claim(claim: dict, context: GuardContext) -> ClaimResult:
             f"Claim in {rationale_fund}'s rationale has fund_id {fund_id!r}.",
         )
 
-    if claim["section"] == "recommendation" and fund_id is not None and fund_id not in context.shortlist:
-        flag("NOT_SHORTLISTED_RECOMMENDATION", f"{fund_id} is not on the shortlist.")
+    recommendable = context.shortlist if context.recommendable is None else context.recommendable
+    if claim["section"] == "recommendation" and fund_id is not None and fund_id not in recommendable:
+        where = "on the shortlist" if context.recommendable is None else "in the LLM ranking of eligible funds"
+        flag("NOT_SHORTLISTED_RECOMMENDATION", f"{fund_id} is not {where}.")
 
     if claim["claim_type"] == "quantitative":
         unverified = [
@@ -157,11 +177,27 @@ def stray_digits(text: str, allowed_tokens: list[str]) -> list[str]:
 
 
 def guard_memo(
-    claims: list[dict], context: GuardContext, rationale_entries: list[str]
+    claims: list[dict],
+    context: GuardContext,
+    rationale_entries: list[str],
+    llm_ranking: list[str] | None = None,
+    llm_dropped: list[str] | None = None,
 ) -> tuple[list[ClaimResult], dict]:
-    """rationale_entries: the fund_id of each shortlist_rationale entry, in draft order."""
+    """rationale_entries: the fund_id of each shortlist_rationale entry, in draft order.
+
+    llm_ranking / llm_dropped: fund_ids in the draft's proposed order and drop list. None (memos
+    before memo-v3) skips the ranking rules and checks recommendations against the baseline.
+    """
+    limits = context.ranking_limits
+    if llm_ranking is not None and limits is not None:
+        context = replace(
+            context,
+            recommendable=[f for f in dict.fromkeys(llm_ranking) if f in limits.eligible_strategies],
+        )
     results = [check_claim(claim, context) for claim in claims]
     memo_issues = _memo_issues(claims, context, rationale_entries)
+    if llm_ranking is not None and limits is not None:
+        memo_issues += llm_ranking_issues(claims, context, limits, llm_ranking, llm_dropped or [])
     flagged = sum(1 for result in results if result.status == "flagged")
     summary = {
         "total": len(results),
@@ -208,8 +244,9 @@ def _memo_issues(
             None,
         )
         if concerns:
+            # A dropped top fund addresses its concerns in its drop rationale instead.
             addressed = any(
-                claim["section"] == "recommendation"
+                claim["section"] in ("recommendation", "llm_dropped")
                 and claim.get("fund_id") == top
                 and set(concerns) & set(claim["evidence_ids"])
                 and (notes_id is None or notes_id in claim["evidence_ids"])
@@ -227,3 +264,123 @@ def _memo_issues(
                     }
                 )
     return issues
+
+
+def llm_ranking_issues(
+    claims: list[dict],
+    context: GuardContext,
+    limits: RankingLimits,
+    ranking: list[str],
+    dropped: list[str],
+) -> list[dict]:
+    """Deterministic checks on the LLM's proposed order against eligibility and the mandate."""
+    issues: list[dict] = []
+
+    def issue(code: str, message: str) -> None:
+        issues.append({"code": code, "message": message})
+
+    eligible = limits.eligible_strategies
+    ineligible = [f for f in dict.fromkeys(ranking) if f not in eligible]
+    if ineligible:
+        issue(
+            "LLM_RANK_INELIGIBLE_FUND",
+            "Only funds that passed every hard screen may be ranked; not eligible: "
+            + ", ".join(ineligible) + ".",
+        )
+
+    duplicates = [f for f, count in Counter([*ranking, *dropped]).items() if count > 1]
+    if duplicates:
+        issue(
+            "LLM_RANK_DUPLICATE",
+            "Each fund may appear once across the ranking and drop list: " + ", ".join(duplicates) + ".",
+        )
+
+    if len(ranking) > limits.max_candidates:
+        issue(
+            "LLM_RANK_OVER_CAPACITY",
+            f"The LLM ranking lists {len(ranking)} funds; the mandate allows {limits.max_candidates}.",
+        )
+
+    names: dict[str, str] = {}
+    counts: Counter[str] = Counter()
+    for fund_id in dict.fromkeys(ranking):
+        if fund_id in eligible:
+            key = eligible[fund_id].strip().casefold()
+            names.setdefault(key, eligible[fund_id].strip())
+            counts[key] += 1
+    crowded = [names[key] for key, count in counts.items() if count > limits.strategy_limit]
+    if crowded:
+        issue(
+            "LLM_RANK_CONCENTRATION",
+            f"More than {limits.strategy_limit} ranked fund(s) per strategy in: " + ", ".join(crowded) + ".",
+        )
+
+    baseline = {fund_id: position for position, fund_id in enumerate(context.shortlist, start=1)}
+    invalid_drops = [f for f in dict.fromkeys(dropped) if f not in baseline or f in ranking]
+    if invalid_drops:
+        issue(
+            "LLM_RANK_INVALID_DROP",
+            "Only baseline-shortlisted funds left out of the LLM ranking can be dropped: "
+            + ", ".join(invalid_drops) + ".",
+        )
+
+    positions: dict[str, int] = {}
+    for position, fund_id in enumerate(ranking, start=1):
+        positions.setdefault(fund_id, position)
+    moved = [
+        fund_id
+        for fund_id in dict.fromkeys([*ranking, *baseline])
+        if fund_id in eligible and positions.get(fund_id) != baseline.get(fund_id)
+    ]
+    uncited = [
+        fund_id
+        for fund_id in moved
+        if not _cites_move_evidence(
+            claims, context, fund_id, "llm_ranking" if fund_id in positions else "llm_dropped"
+        )
+    ]
+    if uncited:
+        issue(
+            "LLM_RANK_MOVE_UNCITED",
+            "A fund whose position differs from the deterministic baseline must cite its own DQ, "
+            "SRC, SCR, or MET evidence (screen passes of eligible funds don't count): "
+            + ", ".join(uncited) + ".",
+        )
+
+    ranks = limits.baseline_ranks
+    ordered = [f for f in positions if f in ranks]
+    reweighted = [
+        f"{above} above {below}"
+        for i, above in enumerate(ordered)
+        for below in ordered[i + 1:]
+        if ranks[above] > ranks[below]
+        and not _cites_move_evidence(claims, context, above, "llm_ranking", non_score_only=True)
+        and not _cites_move_evidence(claims, context, below, "llm_ranking", non_score_only=True)
+    ]
+    if reweighted:
+        issue(
+            "LLM_RANK_REWEIGHTS_SCORE",
+            "Funds ordered against the deterministic baseline must rest on evidence the score does "
+            "not already weigh (DQ, SRC, a failing or unverifiable SCR, or a MET other than Sharpe, "
+            "return, drawdown, or correlation) from at least one of the pair: "
+            + ", ".join(reweighted) + ".",
+        )
+    return issues
+
+
+def _cites_move_evidence(
+    claims: list[dict], context: GuardContext, fund_id: str, section: str, *, non_score_only: bool = False
+) -> bool:
+    limits = context.ranking_limits
+    eligible = limits is not None and fund_id in limits.eligible_strategies
+    return any(
+        (record := context.registry.get(evidence_id)) is not None
+        and record.fund_id == fund_id
+        and record.type in MOVE_EVIDENCE_TYPES
+        and not (non_score_only and SCORE_INPUT_METRIC.match(evidence_id))
+        # Every eligible fund passes every screen, so a pass says nothing that separates funds.
+        and not (eligible and record.type == "screen_result" and record.provenance.get("result") == "pass")
+        for claim in claims
+        if claim["section"] == section and claim.get("rationale_fund_id") == fund_id
+        for evidence_id in claim["evidence_ids"]
+    )

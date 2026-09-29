@@ -229,6 +229,7 @@ class MemoArtifact(Base):
     appendix: Mapped[dict] = mapped_column(JSONB, nullable=False)
     evidence_snapshot: Mapped[list] = mapped_column(JSONB, nullable=False)
     token_usage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    llm_ranking: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     ranking_run: Mapped[RankingRun] = relationship()

@@ -176,7 +176,30 @@ export interface EvidenceRegistryResponse {
   records: EvidenceRecord[];
 }
 
-export type MemoSection = "executive_summary" | "recommendation" | "shortlist_rationale" | "key_risks";
+export type MemoSection =
+  | "llm_ranking"
+  | "llm_dropped"
+  | "executive_summary"
+  | "recommendation"
+  | "shortlist_rationale"
+  | "key_risks";
+
+export interface LlmRankingRow {
+  fund_id: string;
+  eligible: boolean;
+  baseline_rank: number | null;
+  baseline_position: number | null;
+  llm_rank: number | null;
+  delta: number | null;
+  move: "same" | "up" | "down" | "new" | "dropped" | "invalid_drop";
+  claim_id: string | null;
+}
+
+export interface LlmRanking {
+  source: "llm" | "baseline";
+  entries: LlmRankingRow[];
+  dropped: LlmRankingRow[];
+}
 
 export interface GuardReason {
   code: string;
@@ -246,6 +269,7 @@ export interface MemoResponse {
   appendix: MemoAppendix;
   evidence_snapshot: EvidenceRecord[];
   token_usage: { input_tokens: number | null; output_tokens: number | null; total_tokens: number | null } | null;
+  llm_ranking: LlmRanking | null;
 }
 
 export interface MemoSummary {
