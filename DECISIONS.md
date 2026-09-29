@@ -79,12 +79,22 @@ This is a warning. It does not block the fund or affect the screens and ranking.
 
 **Consequence:** In the sample universe only F007 triggers it, with 60 months, no losses, and about 0.4% volatility. F007 will still rank highly until a human acts on the warning, and the memo should cite the warning next to its metrics.
 
-## OPEN — Slice 3 acceptance: app metrics must reproduce the sample generator
+## Slice 3 acceptance: app metrics reproduce the sample generator (closed)
 
-**Issue:** F003 (drawdown about 18.6%) and F006 (about 18.4%) pass the default 20% drawdown cap narrowly. The sample generator (`app.seed.sample_data`) computes its drawdown and volatility on each fund's clean return path. The app will compute them on the observations that survive validation.
-- F004 skips a month.
-- F006 loses its unparseable Nov 2023 row.
+**Issue:** F003 (drawdown about 18.6%) and F006 (about 18.4%) pass the default 20% drawdown cap narrowly. How missing months are handled could have moved these figures enough to flip a narrow pass. For example, F004 skips a month and F006 loses its unparseable November 2023 row.
 
-How missing months are handled (for example, compounding across a gap or treating the gap as a zero return) could move these figures enough to flip a narrow pass.
+**Resolution:** Metrics compound across gaps using observed months only and never fill a missing month. `tests/test_ranking_runs.py::test_sample_universe_end_to_end` uploads the sample and runs the full pipeline. For every fund that gets metrics (F001 through F008), it asserts that the app's max drawdown and annualized volatility match the generator within 5 bps. The generator's figures are computed on the rows the CSV actually emits. The test also asserts that F003 and F006 pass a 20% drawdown cap.
 
-**Needs before Slice 3 is accepted:** a test that computes drawdown and annualized volatility with the app's metrics functions on the sample upload, and asserts they match the generator within a stated tolerance. The generator's figures should be computed on the same emitted rows, not the clean path. The test must also assert that F003 and F006 still pass a 20% drawdown cap. A pre-check with the generator's arithmetic found that dropping F006's Nov 2023 month leaves its drawdown at 18.37%, and F004's gap leaves its drawdown at 2.30%. The app's implementation still has to be shown to agree.
+## Ranking policy v1 calculation choices
+
+**Choice:**
+- **Sharpe** is `mean(r_m − rf_m) / std(r_m) × √12`, with `rf_m = (1 + rf)^(1/12) − 1`. The annual `rf` is the mean monthly FRED DGS3MO rate over the fund's own window, or the configured fallback when FRED data isn't available. CAGR is a separate metric and is unverifiable below 12 months.
+- **Score components** use a percentile rank across eligible funds rather than min-max. That way F007's outlier Sharpe (about 15) doesn't squeeze every other fund's Sharpe score toward zero.
+- **Benchmarks** come from daily adjusted closes, taking the last close of each month and dropping the current partial month. A cache under 24 hours old is used without a live call.
+- **Unavailable benchmark:** if a benchmark that an eligible fund needs is unavailable, every eligible fund's correlation component is set to 0 and the run warns `BENCHMARK_UNAVAILABLE`. This keeps scores comparable within the run. A single fund with fewer than 12 overlapping months gets 0 only for itself.
+- **Concentration floor:** the floor of one fund per strategy stays, and the run warns `CONCENTRATION_FLOOR_APPLIED` whenever it binds.
+- **Strategy matching:** preferred and excluded strategies are compared case-insensitively.
+
+**Why:** Each of these makes a result explainable in one sentence to a committee. Percentile ranks keep one implausible fund from reshaping everyone else's score. Zeroing correlation for the whole run keeps a data outage from rewarding the funds whose benchmark happened to load.
+
+**Consequence:** Scores are ordinal. A fund's score says where it sits among the eligible funds in that run, not how far ahead it is. Removing or adding an eligible fund can change the other funds' component scores.

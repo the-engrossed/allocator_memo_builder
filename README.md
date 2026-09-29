@@ -25,6 +25,20 @@ python -m app.seed.sample_data
 
 The API is at [http://localhost:8000](http://localhost:8000) (`GET /api/health`).
 
+After pulling dependency changes, rebuild the API image with `docker compose build api`.
+
+## Benchmarks and ranking
+
+`POST /api/analyses/{id}/ranking-runs` screens, scores, and shortlists the funds against the saved mandate, and stores an immutable run. `GET /api/analyses/{id}/ranking-runs/latest` and `GET /api/ranking-runs/{run_id}` read runs back.
+
+SPY and AGG come live from Yahoo Finance. When the live call fails, the app falls back to a local cache, then to the committed snapshots in `sample_data/benchmark_fallback_{spy,agg}.csv`. The risk-free rate comes from FRED DGS3MO when `FRED_API_KEY` is set, and otherwise from `RF_FALLBACK_ANNUAL`. Every run records which source it used.
+
+To refresh the snapshots from Yahoo Finance, run from `backend/`:
+
+```bash
+python -m scripts.refresh_benchmark_snapshot
+```
+
 ## Tests
 
 ```bash

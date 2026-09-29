@@ -24,6 +24,23 @@ from sqlalchemy.orm import Session  # noqa: E402
 _BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 
+@pytest.fixture(autouse=True)
+def offline_market_data(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """No test may reach Yahoo Finance or FRED; caches and snapshots live in tmp_path."""
+    from app.config import settings
+    from app.services import benchmarks
+
+    def _offline(*_args: object, **_kwargs: object) -> None:
+        raise benchmarks.MarketDataError("Network access is disabled in tests.")
+
+    monkeypatch.setattr(benchmarks, "fetch_yahoo_daily_closes", _offline)
+    monkeypatch.setattr(benchmarks, "fetch_fred_monthly_rates", _offline)
+    monkeypatch.setattr(settings, "benchmark_cache_dir", tmp_path / "benchmark_cache")
+    monkeypatch.setattr(settings, "benchmark_snapshot_dir", tmp_path / "benchmark_snapshot")
+    monkeypatch.setattr(settings, "fred_api_key", "")
+    monkeypatch.setattr(settings, "rf_fallback_annual", 0.04)
+
+
 @pytest.fixture(scope="session")
 def pg_engine() -> Iterator[Engine]:
     if not _TEST_DATABASE_URL:

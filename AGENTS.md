@@ -28,6 +28,7 @@ CSV → normalize → validate → benchmark → metrics → mandate screen → 
   - Yahoo Finance via `yfinance` for `SPY` and `AGG` monthly benchmark returns.
   - FRED `DGS3MO` only as an optional Treasury/risk-free reference for Sharpe.
 - LLM: OpenAI only, using structured Pydantic output.
+- Numerics: pandas and numpy. HTTP to FRED: httpx.
 - Tests: pytest.
 - Runtime data is local-first. Use local mounts/cache directories only.
 
@@ -115,22 +116,37 @@ Metric functions must:
 - Handle insufficient data clearly.
 - Be covered by pytest using small, hand-checkable input series.
 
-V1 metrics only:
-- CAGR / annualized return
-- Annualized volatility
-- Sharpe ratio
-- Maximum drawdown
-- Correlation to selected benchmark
-- Months of return history
+V1 metrics only (definitions in `app/services/metrics.py`):
+- CAGR / annualized return: `prod(1 + r)^(12/n) - 1`; unverifiable when n < 12.
+- Annualized volatility: sample std (ddof=1) × √12.
+- Sharpe ratio: `mean(r_m − rf_m) / std(r_m) × √12`, `rf_m = (1 + rf)^(1/12) − 1`.
+- Maximum drawdown: largest peak-to-trough loss of the wealth index starting at 1.0.
+- Correlation to the mapped benchmark (Credit → AGG, else SPY): Pearson on overlapping
+  months; unverifiable below 12 overlapping months.
+- Months of return history.
+- `target_gap_bps = annualized_return_bps − target_return_bps` (reporting only).
+
+Numeric policy: metrics are computed with pandas/numpy floats and rounded **once**, when
+persisted and before any comparison to a mandate threshold — to integer bps (half away from
+zero) for rates, or to 2 decimals for Sharpe and correlation. Mandate thresholds and any
+future allocations stay integer bps. Gaps in a fund's months are never filled; metrics use
+observed months only. Funds with blocking validation issues get no metrics.
 
 Do not add Sortino, beta, alpha, tracking error, capture ratios, recovery duration,
 peer heatmaps, or portfolio optimization without explicit approval.
 
 ### 6. Benchmark provenance and failure behavior are visible
 
-Yahoo Finance is used only for `SPY` and `AGG` monthly return series.
+Yahoo Finance is used only for `SPY` and `AGG` monthly return series: daily adjusted close
+→ last close of each calendar month → month-over-month returns, with the current partial
+month dropped. Calls time out after 10 seconds.
 
-FRED `DGS3MO` is optional. If its key is missing or the request fails:
+Benchmark resolution: a cache under 24 hours old is used as `cached`; otherwise live →
+any cached copy (`cached`) → committed snapshot `sample_data/benchmark_fallback_{spy,agg}.csv`
+(`fallback`) → `unavailable`. Never invent or hand-write benchmark numbers; snapshots are
+written only by `backend/scripts/refresh_benchmark_snapshot.py`.
+
+FRED `DGS3MO` is optional. If its key is missing or the request fails (and no cache exists):
 - Use an explicit configurable 4.0% annual risk-free-rate fallback.
 - Mark the source state as `fallback`.
 - Surface this state in the UI and audit provenance.
@@ -140,9 +156,11 @@ Every benchmark/risk-free input must record:
 - Ticker or series identifier.
 - Retrieval timestamp.
 - Date coverage.
-- State: `live`, `cached`, or `fallback`.
+- State: `live`, `cached`, `fallback`, or `unavailable`.
 
-Never label cached or fallback data as live.
+Never label cached or fallback data as live. If a benchmark needed by an eligible fund is
+unavailable, the correlation component is 0 for every eligible fund in that run and the run
+carries a `BENCHMARK_UNAVAILABLE` warning.
 
 ### 7. CSV scope is intentionally narrow
 
@@ -241,10 +259,24 @@ Drawdown resilience: 20%
 Low benchmark correlation: 10%
 ```
 
+Each component is a percentile rank across eligible funds (`position / (n − 1) × 100`, best
+= 100, ties share the average position, a single fund = 100). A component without a
+verifiable value scores 0 and is flagged. The total is rounded to 1 decimal. Ties break on:
+total desc, target gap desc, management fee asc, performance fee asc, fund name (casefold)
+asc, fund_id asc.
+
 Shortlist construction runs on the ranked list and never changes eligibility or score:
 - `max_candidates` caps the shortlist size.
 - `strategy_concentration_cap_bps` caps funds per strategy at
-  `max(1, floor(max_candidates × cap / 10000))`.
+  `max(1, floor(max_candidates × cap / 10000))`; the run warns
+  `CONCENTRATION_FLOOR_APPLIED` when the floor of one binds.
+- Every eligible fund gets exactly one of `SELECTED_PREFERENCE_PASS`, `SELECTED_RANK_PASS`,
+  `CONCENTRATION_SKIP`, or `CAPACITY_REACHED`. No allocation weights in v1.
+- Strategy names match case-insensitively (casefold) for preferences and exclusions.
+
+Every ranking run is immutable: it stores the mandate snapshot and its SHA-256, benchmark
+provenance, and policy version. Mandate edits never change a past run; a new POST creates a
+new run.
 - `preferred_strategies` is a preference, not a whitelist: fill first with eligible funds in
   preferred strategies (rank order, within the cap), then with the remaining eligible funds in
   rank order. An empty list means pure rank order.

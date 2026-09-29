@@ -12,7 +12,13 @@ from pydantic import (
     model_validator,
 )
 
-from app.domain.enums import AnalysisStatus, IssueSeverity, LiquidityFrequency
+from app.domain.enums import (
+    AnalysisStatus,
+    IssueSeverity,
+    LiquidityFrequency,
+    ScreenOutcome,
+    SelectionReason,
+)
 
 
 class ValidationIssueOut(BaseModel):
@@ -102,6 +108,60 @@ class MandateResponse(MandateFields):
     analysis_id: UUID
     created_at: datetime
     updated_at: datetime
+
+
+class ScreenResultOut(BaseModel):
+    code: str
+    screen: str
+    result: ScreenOutcome
+    observed: object
+    threshold: object
+    reason: str
+
+
+class RunWarningOut(BaseModel):
+    code: str
+    message: str
+    details: dict
+
+
+class FundEvaluationOut(BaseModel):
+    fund_id: str
+    fund_name: str
+    strategy: str
+    benchmark: str
+    eligible: bool
+    rank: int | None
+    total_score: float | None
+    selection_reason: SelectionReason | None
+    selection_detail: str | None
+    inputs: dict
+    metrics: dict | None
+    screens: list[ScreenResultOut]
+    score_components: dict | None
+    data_quality: list[dict]
+    evidence_ids: list[str]
+
+
+class RankingRunSummary(BaseModel):
+    evaluated: int
+    eligible: int
+    excluded: int
+    shortlisted: int
+
+
+class RankingRunResponse(BaseModel):
+    run_id: UUID
+    analysis_id: UUID
+    created_at: datetime
+    policy_version: str
+    mandate_sha256: str
+    mandate_snapshot: dict
+    benchmark_provenance: dict
+    score_weights: dict[str, int]
+    warnings: list[RunWarningOut]
+    summary: RankingRunSummary
+    funds: list[FundEvaluationOut]
 
 
 class HealthResponse(BaseModel):

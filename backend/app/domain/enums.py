@@ -40,3 +40,23 @@ class LiquidityFrequency(StrEnum):
     QUARTERLY = "quarterly"
     SEMIANNUAL = "semiannual"
     ANNUAL = "annual"
+
+
+class SeriesState(StrEnum):
+    LIVE = "live"
+    CACHED = "cached"
+    FALLBACK = "fallback"
+    UNAVAILABLE = "unavailable"
+
+
+class ScreenOutcome(StrEnum):
+    PASS = "pass"
+    FAIL = "fail"
+    UNVERIFIABLE = "unverifiable"
+
+
+class SelectionReason(StrEnum):
+    SELECTED_PREFERENCE_PASS = "SELECTED_PREFERENCE_PASS"
+    SELECTED_RANK_PASS = "SELECTED_RANK_PASS"
+    CONCENTRATION_SKIP = "CONCENTRATION_SKIP"
+    CAPACITY_REACHED = "CAPACITY_REACHED"

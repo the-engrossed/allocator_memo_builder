@@ -3,10 +3,12 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -147,3 +149,50 @@ class Mandate(Base):
     max_candidates: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class RankingRun(Base):
+    """An immutable snapshot of one screen-rank-shortlist evaluation. Never updated."""
+
+    __tablename__ = "ranking_runs"
+    __table_args__ = (Index("ix_ranking_runs_analysis_created", "analysis_id", "created_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    analysis_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("analyses.id", ondelete="CASCADE"), nullable=False
+    )
+    mandate_snapshot: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    mandate_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    benchmark_provenance: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    warnings: Mapped[list] = mapped_column(JSONB, nullable=False)
+    policy_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    evaluations: Mapped[list["FundEvaluation"]] = relationship(
+        back_populates="run", cascade="all, delete-orphan", order_by="FundEvaluation.fund_id"
+    )
+
+
+class FundEvaluation(Base):
+    __tablename__ = "fund_evaluations"
+
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ranking_runs.id", ondelete="CASCADE"), primary_key=True
+    )
+    fund_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    fund_name: Mapped[str] = mapped_column(Text, nullable=False)
+    strategy: Mapped[str] = mapped_column(Text, nullable=False)
+    benchmark: Mapped[str] = mapped_column(String(8), nullable=False)
+    eligible: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    rank: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 1), nullable=True)
+    selection_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    selection_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    inputs: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    metrics: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    screens: Mapped[list] = mapped_column(JSONB, nullable=False)
+    score_components: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    data_quality: Mapped[list] = mapped_column(JSONB, nullable=False)
+    evidence_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False)
+
+    run: Mapped[RankingRun] = relationship(back_populates="evaluations")
