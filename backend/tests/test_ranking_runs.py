@@ -1,5 +1,6 @@
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.seed.sample_data import FUNDS, MARKET, fund_returns
 from app.services import benchmarks
+from app.services.ranking_runs import _data_quality
 
 SAMPLE = Path(__file__).resolve().parents[2] / "sample_data" / "sample_fund_universe.csv"
 
@@ -99,6 +101,44 @@ def test_sample_upload_reports_common_window(client: TestClient) -> None:
     assert not any(issue["code"] == "COMMON_WINDOW_SHORT" for issue in body["issues"])
 
 
+def test_data_quality_ids_include_field_and_suffix_repeats_in_row_order() -> None:
+    def issue(code: str, field: str | None, rows: list[int], severity: str = "warning"):
+        return SimpleNamespace(
+            code=code, field=field, row_numbers=rows, severity=severity, message=code
+        )
+
+    entries = _data_quality(
+        "F001",
+        [
+            issue("MISSING_MONTHS", "period", [40]),
+            issue("CONFLICTING_METADATA", None, [1, 2]),
+            issue("MISSING_MONTHS", "period", [10]),
+            issue("RETURN_UNIT_INFERRED", "net_return", [1], severity="info"),
+        ],
+    )
+    assert [(entry["evidence_id"], entry["row_numbers"]) for entry in entries] == [
+        ("DQ-F001-CONFLICTING-METADATA", [1, 2]),
+        ("DQ-F001-MISSING-MONTHS-PERIOD", [10]),
+        ("DQ-F001-MISSING-MONTHS-PERIOD-2", [40]),
+    ]
+
+
+def test_notes_input_is_missing_when_empty(client: TestClient, live_benchmarks: None) -> None:
+    funds = _funds(_post_run(client, _sample_analysis(client)))
+    assert all(fund["inputs"]["notes"]["status"] == "verified" for fund in funds.values())
+    empty = {"raw": "", "value": "", "status": "missing"}
+    header = "fund_id,fund_name,strategy,period,net_return,liquidity_frequency,notice_days,"
+    header += "lockup_months,mgmt_fee_bps,perf_fee_bps,notes\n"
+    rows = "".join(f"X1,Solo,Macro,2024-{m:02d},0.01,monthly,30,0,100,2000,\n" for m in range(1, 13))
+    upload = client.post(
+        "/api/analyses", files={"file": ("solo.csv", (header + rows).encode(), "text/csv")}
+    )
+    analysis_id = upload.json()["analysis_id"]
+    client.put(f"/api/analyses/{analysis_id}/mandate", json=DEFAULT_MANDATE)
+    solo = _funds(_post_run(client, analysis_id))["X1"]["inputs"]["notes"]
+    assert {key: solo[key] for key in empty} == empty
+
+
 def test_missing_analysis_is_404(client: TestClient) -> None:
     missing = uuid.uuid4()
     assert client.post(f"/api/analyses/{missing}/ranking-runs").status_code == 404
@@ -127,9 +167,20 @@ def test_sample_universe_end_to_end(client: TestClient, live_benchmarks: None) -
     assert "SCR-F005-LOCKUP-FAIL" in funds["F005"]["evidence_ids"]
 
     assert [d["code"] for d in funds["F007"]["data_quality"]] == ["SMOOTH_RETURNS"]
-    assert "DQ-F007-SMOOTH-RETURNS" in funds["F007"]["evidence_ids"]
-    assert "DQ-F001-FUND-ID-MISMATCH" in funds["F001"]["evidence_ids"]
-    assert "DQ-F004-INCONSISTENT-DATE-RANGE" in funds["F004"]["evidence_ids"]
+    assert "DQ-F007-SMOOTH-RETURNS-NET-RETURN" in funds["F007"]["evidence_ids"]
+    assert "DQ-F001-FUND-ID-MISMATCH-FUND-ID" in funds["F001"]["evidence_ids"]
+    assert "DQ-F001-CONFLICTING-METADATA" in funds["F001"]["evidence_ids"]
+    assert "DQ-F004-INCONSISTENT-DATE-RANGE-PERIOD" in funds["F004"]["evidence_ids"]
+    for fund_id, fund in funds.items():
+        ids = fund["evidence_ids"]
+        assert len(ids) == len(set(ids)), f"{fund_id} has duplicate evidence ids"
+
+    notes = funds["F007"]["inputs"]["notes"]
+    assert notes["evidence_id"] == "SRC-F007-NOTES" and notes["status"] == "verified"
+    assert notes["value"] == notes["raw"] and "No down month" in notes["raw"]
+    assert notes["source_row"] == funds["F007"]["inputs"]["fund_name"]["source_row"]
+    assert "SRC-F007-NOTES" in funds["F007"]["evidence_ids"]
+    assert not any("NOTES" in screen["code"] for screen in funds["F007"]["screens"])
     assert not any(
         d["code"] == "SMOOTH_RETURNS" for f, fund in funds.items() if f != "F007"
         for d in fund["data_quality"]

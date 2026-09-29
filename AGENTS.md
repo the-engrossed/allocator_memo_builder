@@ -104,9 +104,15 @@ MET-F003-SHARPE
 MET-F003-MAX-DRAWDOWN
 MET-F003-CORRELATION-SPY
 SRC-F003-LIQUIDITY-FREQUENCY
-DQ-F003-SHORT-HISTORY
+SRC-F003-NOTES
+DQ-F003-SHORT-HISTORY-PERIOD
+DQ-F001-CONFLICTING-METADATA
 SCR-F003-LIQUIDITY-FAIL
 ```
+
+Data-quality IDs are `DQ-{fund}-{CODE}-{FIELD}` when the issue has a field, otherwise
+`DQ-{fund}-{CODE}`; a repeat within one fund gets `-2`, `-3`, … in source-row order.
+Evidence IDs are unique within each fund evaluation.
 
 ### 5. Financial calculations are pure and tested
 

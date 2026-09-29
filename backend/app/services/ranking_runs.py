@@ -323,9 +323,17 @@ def _resolve_fund_inputs(
                 "value": value,
                 "status": "verified" if value is not None else "invalid",
                 "source_row": row.row_number,
-                "evidence_id": f"SRC-{evidence_key(fund_id)}-{field.upper().replace('_', '-')}",
+                "evidence_id": _source_evidence_id(fund_id, field),
             }
             for field, value in resolved_values.items()
+        }
+        notes = raw.get("notes", "")
+        inputs_json["notes"] = {
+            "raw": notes,
+            "value": notes,
+            "status": "verified" if notes else "missing",
+            "source_row": row.row_number,
+            "evidence_id": _source_evidence_id(fund_id, "notes"),
         }
         blocking = tuple(sorted({issue.code for issue in issues if issue.code in BLOCKING_CODES}))
         resolved.append(
@@ -347,20 +355,39 @@ def _resolve_fund_inputs(
     return resolved
 
 
+def _source_evidence_id(fund_id: str, field: str) -> str:
+    return f"SRC-{evidence_key(fund_id)}-{_id_part(field)}"
+
+
+def _id_part(name: str) -> str:
+    return name.upper().replace("_", "-")
+
+
 def _data_quality(fund_id: str, issues: list) -> list[dict]:
+    """Non-info issues for the fund with unique evidence ids: DQ-{fund}-{CODE}[-{FIELD}],
+    suffixed -2, -3, ... in source-row order if the same id would repeat."""
     key = evidence_key(fund_id)
-    return [
-        {
-            "code": issue.code,
-            "severity": issue.severity,
-            "field": issue.field,
-            "message": issue.message,
-            "row_numbers": list(issue.row_numbers or []),
-            "evidence_id": f"DQ-{key}-{issue.code.replace('_', '-')}",
-        }
-        for issue in issues
-        if issue.severity != IssueSeverity.INFO
-    ]
+    relevant = [issue for issue in issues if issue.severity != IssueSeverity.INFO]
+    relevant.sort(key=lambda issue: (min(issue.row_numbers or [10**9]), issue.code))
+    seen: dict[str, int] = defaultdict(int)
+    entries: list[dict] = []
+    for issue in relevant:
+        base = f"DQ-{key}-{_id_part(issue.code)}"
+        if issue.field:
+            base = f"{base}-{_id_part(issue.field)}"
+        seen[base] += 1
+        evidence_id = base if seen[base] == 1 else f"{base}-{seen[base]}"
+        entries.append(
+            {
+                "code": issue.code,
+                "severity": issue.severity,
+                "field": issue.field,
+                "message": issue.message,
+                "row_numbers": list(issue.row_numbers or []),
+                "evidence_id": evidence_id,
+            }
+        )
+    return entries
 
 
 _METRIC_EVIDENCE = {
