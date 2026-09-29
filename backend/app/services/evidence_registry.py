@@ -57,6 +57,19 @@ _SELECTION_LABELS = {
     "CONCENTRATION_SKIP": "Skipped by the strategy concentration cap",
     "CAPACITY_REACHED": "Not selected: shortlist full",
 }
+_SELECTION_SHORT = {
+    "CONCENTRATION_SKIP": "Skipped · concentration cap",
+    "CAPACITY_REACHED": "Not selected · shortlist full",
+}
+# Chip text for data-quality evidence; the full issue message is in the label and provenance.
+_DATA_QUALITY_SHORT = {
+    "SMOOTH_RETURNS": "Smooth returns",
+    "MISSING_MONTHS": "Missing months",
+    "INCONSISTENT_DATE_RANGE": "Stale data",
+    "FUND_ID_MISMATCH": "Possible duplicate fund",
+    "CONFLICTING_METADATA": "Conflicting terms",
+    "INVALID_METADATA": "Invalid term",
+}
 _BENCHMARKS = (("SPY", "BMK-SPY"), ("AGG", "BMK-AGG"), ("risk_free", "BMK-RF"))
 _MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
@@ -119,7 +132,8 @@ def _metric_records(run: RankingRun, evaluation: FundEvaluation) -> list[Evidenc
     metrics = evaluation.metrics or {}
     benchmark = metrics.get("benchmark") or evaluation.benchmark
     records = []
-    for name, evidence_id in (metrics.get("metric_evidence") or {}).items():
+    # Sorted so registry order never depends on JSONB key order.
+    for name, evidence_id in sorted((metrics.get("metric_evidence") or {}).items()):
         value = metrics.get(name)
         provenance = {
             "formula": _METRIC_FORMULAS.get(name, ""),
@@ -200,6 +214,8 @@ def _source_display(name: str, entry: dict, status: str) -> str:
         return f"{value} months"
     if name in ("mgmt_fee_bps", "perf_fee_bps"):
         return f"{value} bps ({format_bps(int(value))})"
+    if name == "notes":
+        return "Manager notes"
     return str(value)
 
 
@@ -209,12 +225,13 @@ def _data_quality_records(evaluation: FundEvaluation) -> list[EvidenceRecord]:
             evidence_id=issue["evidence_id"],
             type="data_quality",
             fund_id=evaluation.fund_id,
-            label=f"{evaluation.fund_id} {issue['code']} ({issue['severity']})",
-            display_value=issue["message"],
+            label=f"{evaluation.fund_id} {issue['code']} ({issue['severity']}): {issue['message']}",
+            display_value=_DATA_QUALITY_SHORT.get(issue["code"], issue["code"].replace("_", " ").capitalize()),
             verification_status="verified",
             provenance={
                 "code": issue["code"],
                 "severity": issue["severity"],
+                "message": issue["message"],
                 "field": issue.get("field"),
                 "source_rows": issue.get("row_numbers", []),
             },
@@ -256,19 +273,24 @@ def _selection_records(evaluation: FundEvaluation) -> list[EvidenceRecord]:
     if not reason:
         return []
     score = None if evaluation.total_score is None else float(evaluation.total_score)
-    display = _SELECTION_LABELS.get(reason, reason)
-    if evaluation.rank is not None:
-        display = f"Rank {evaluation.rank}, score {score:.1f}: {display}"
+    decision = _SELECTION_LABELS.get(reason, reason)
+    if reason in _SELECTION_SHORT:
+        display = _SELECTION_SHORT[reason]
+    elif evaluation.rank is not None and score is not None:
+        display = f"Rank {evaluation.rank} · score {score:.1f}"
+    else:
+        display = decision
     return [
         EvidenceRecord(
             evidence_id=selection_evidence_id(evaluation.fund_id, reason),
             type="selection",
             fund_id=evaluation.fund_id,
-            label=f"{evaluation.fund_id} shortlist decision",
+            label=f"{evaluation.fund_id} shortlist decision: {decision}",
             display_value=display,
             verification_status="verified",
             provenance={
                 "selection_reason": reason,
+                "selection": decision,
                 "selection_detail": evaluation.selection_detail,
                 "rank": evaluation.rank,
                 "total_score": score,

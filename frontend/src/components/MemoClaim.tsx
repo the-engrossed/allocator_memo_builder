@@ -46,8 +46,8 @@ export function MemoClaim({ claim, records }: MemoClaimProps) {
       </div>
       {flagged && (
         <ul className="mt-2 space-y-1 text-xs text-red-100">
-          {claim.guard_reasons.map((reason) => (
-            <li key={reason.code}>
+          {claim.guard_reasons.map((reason, index) => (
+            <li key={`${reason.code}-${index}`}>
               <span className="font-mono">{reason.code}</span> · {reason.message}
             </li>
           ))}

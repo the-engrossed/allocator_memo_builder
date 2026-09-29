@@ -158,8 +158,40 @@ def test_registry_is_derived_from_the_run_and_resolves_every_issued_id(
     assert by_id["MET-F003-MAX-DRAWDOWN"]["provenance"]["window_start"] == "2021-09-01"
     assert by_id["BMK-SPY"]["verification_status"] == "verified"
     assert by_id["BMK-RF"]["display_value"] == "Configured fallback 4.00% (fallback)"
-    assert by_id["SEL-F007-SELECTED-PREFERENCE-PASS"]["display_value"].startswith("Rank 1, score ")
     assert not any(record["evidence_id"].startswith("MET-F009") for record in registry)
+
+    selected = by_id["SEL-F007-SELECTED-PREFERENCE-PASS"]
+    assert re.fullmatch(r"Rank 1 · score \d+\.\d", selected["display_value"])
+    assert selected["label"] == "F007 shortlist decision: Selected in the preferred-strategy pass"
+    assert selected["provenance"]["selection_detail"]
+    short_selection = {"CONCENTRATION_SKIP": "Skipped · concentration cap", "CAPACITY_REACHED": "Not selected · shortlist full"}
+    skipped = [r for r in registry if r["type"] == "selection" and r["provenance"]["selection_reason"] in short_selection]
+    assert skipped
+    for record in skipped:
+        assert record["display_value"] == short_selection[record["provenance"]["selection_reason"]]
+
+    smooth = by_id["DQ-F007-SMOOTH-RETURNS-NET-RETURN"]
+    assert smooth["display_value"] == "Smooth returns"
+    assert smooth["provenance"]["message"].startswith("F007: returns are unusually smooth")
+    assert smooth["label"].endswith(smooth["provenance"]["message"])
+    assert by_id["DQ-F004-INCONSISTENT-DATE-RANGE-PERIOD"]["display_value"] == "Stale data"
+    dq_short = {
+        "SMOOTH_RETURNS": "Smooth returns", "MISSING_MONTHS": "Missing months",
+        "INCONSISTENT_DATE_RANGE": "Stale data", "FUND_ID_MISMATCH": "Possible duplicate fund",
+        "CONFLICTING_METADATA": "Conflicting terms", "INVALID_METADATA": "Invalid term",
+    }
+    for record in (r for r in registry if r["type"] == "data_quality"):
+        code = record["provenance"]["code"]
+        assert record["display_value"] == dq_short.get(code, code.replace("_", " ").capitalize())
+    assert by_id["DQ-F009-RETURN-OUT-OF-RANGE-NET-RETURN"]["display_value"] == "Return out of range"
+
+    notes = by_id["SRC-F007-NOTES"]
+    assert notes["display_value"] == "Manager notes"
+    assert notes["provenance"]["raw_value"].startswith("No down month since inception.")
+
+    metric_ids = [r["evidence_id"] for r in registry if r["type"] == "metric" and r["fund_id"] == "F007"]
+    f007 = next(f for f in run["funds"] if f["fund_id"] == "F007")["metrics"]["metric_evidence"]
+    assert metric_ids == [f007[name] for name in sorted(f007)]
 
     orm_run = db_session.get(RankingRun, uuid.UUID(run["run_id"]))
     rebuilt = [record.to_json() for record in build_registry(orm_run).values()]
@@ -176,7 +208,7 @@ def test_missing_key_uses_a_clean_template_memo(client: TestClient, live_benchma
     assert memo["generation_mode"] == "template"
     assert memo["fallback_reason"] == "OPENAI_API_KEY is not set"
     assert memo["model"] is None and memo["token_usage"] is None
-    assert memo["revision"] == 1 and memo["prompt_version"] == "memo-v1"
+    assert memo["revision"] == 1 and memo["prompt_version"] == "memo-v2"
     assert memo["guard_summary"]["status"] == "clean", memo["guard_summary"]
     assert memo["guard_summary"]["flagged"] == 0
 

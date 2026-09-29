@@ -21,7 +21,7 @@ from app.services.evidence_registry import (
     selection_evidence_id,
 )
 
-PROMPT_VERSION = "memo-v1"
+PROMPT_VERSION = "memo-v2"
 MAX_CONNECTION_ATTEMPTS = 2
 SELECTED = ("SELECTED_PREFERENCE_PASS", "SELECTED_RANK_PASS")
 
@@ -46,7 +46,8 @@ Claims
 - claim_type: "quantitative" if the claim states a figure, "qualitative" for a factual statement
   without a figure, "judgment" for opinions and recommendations.
 - fund_id: the fund the claim is about, or null for claims spanning several funds. A claim with a
-  fund_id may cite only that fund's evidence plus BMK-* and RUN-* evidence.
+  fund_id may cite only that fund's evidence plus BMK-* and RUN-* evidence. In a claim with fund_id
+  null, name every fund whose evidence you cite, by fund ID, in the prose.
 
 Sections
 - executive_summary: the shortlist outcome, key drivers, and the most important caveats.

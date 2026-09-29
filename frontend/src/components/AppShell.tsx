@@ -36,7 +36,8 @@ export function AppShell({ activeStep, steps, onSelectStep, children }: AppShell
             <h1 className="mt-1 text-xl font-semibold text-slate-50">IC Memo Workbench</h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-400">
               Deterministic software owns the data, the math, and every displayed figure. The
-              language model will only write cited narrative in a later step.
+              language model only writes narrative that cites evidence, and a guard checks every
+              claim.
             </p>
           </div>
           <ol className="grid gap-2 sm:grid-cols-4">
